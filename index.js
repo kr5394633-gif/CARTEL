@@ -2,57 +2,31 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
-const { initMusicPlayer } = require('./utils/musicPlayer');
+const { initializePlayer } = require('./player');
+const { connectToDatabase } = require('./mongodb');
+const colors = require('./utils/colors');
 
 // ---------- Pre-flight check ----------
-// If these folders are missing, every deploy has the same symptom: a raw
-// ENOENT/scandir crash that doesn't say *why*. Usually it means the
-// commands/events/utils/api/public folders weren't actually pushed to the
-// repo Railway (or your host) is deploying from — only individual files
-// were. Check this loudly before anything else so the fix is obvious.
 const REQUIRED_DIRS = ['commands', 'events', 'utils', 'api', 'public'];
 const missingDirs = REQUIRED_DIRS.filter((dir) => !fs.existsSync(path.join(__dirname, dir)));
 if (missingDirs.length > 0) {
   console.error('❌ Startup failed: missing required folder(s): ' + missingDirs.join(', '));
-  console.error('   This almost always means these folders exist locally/in the zip you were given,');
-  console.error('   but were never committed and pushed to the Git repo your host is deploying from.');
-  console.error('   Fix: from your project root, run:');
-  console.error('     git add -A');
-  console.error('     git status   <- confirm commands/ events/ utils/ api/ public/ show as new files');
-  console.error('     git commit -m "add missing bot folders"');
-  console.error('     git push');
-  console.error('   Then redeploy. If you\'re not using git, make sure your host is uploading the FULL');
-  console.error('   project folder, not just the files you individually edited.');
   process.exit(1);
 }
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN || BOT_TOKEN === 'paste_your_bot_token_here' || BOT_TOKEN.includes('your_bot_token')) {
-  console.error('❌ Bot is offline: BOT_TOKEN is missing or still set to the placeholder value in the .env file.');
-  console.error('   Fix: open .env and replace BOT_TOKEN=paste_your_bot_token_here with your real Discord bot token.');
+  console.error('❌ Bot is offline: BOT_TOKEN is missing or still set to placeholder.');
+  console.error('   Fix: set BOT_TOKEN in .env with your real Discord bot token.');
   process.exit(1);
 }
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildModeration, // needed for ban add/remove events
-    GatewayIntentBits.GuildVoiceStates, // needed for music playback
-    GatewayIntentBits.DirectMessages, // for DM support
-  ],
+  intents: Object.keys(GatewayIntentBits).map((a) => GatewayIntentBits[a]),
   partials: [Partials.Message, Partials.Channel, Partials.GuildMember],
 });
 
-// Set immediate online status (will be updated by ready event)
-client.on('ready', () => {
-  client.user.setPresence({
-    activities: [{ name: '🛡️ Server Security', type: 'Watching' }],
-    status: 'online',
-  });
-});
+client.config = require('./config-music.json');
 
 // ---------- Load Commands ----------
 client.commands = new Collection();
@@ -61,7 +35,19 @@ const commandFolders = fs.readdirSync(commandsPath);
 
 for (const folder of commandFolders) {
   const folderPath = path.join(commandsPath, folder);
-  const commandFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith('.js'));
+  const commandFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith('.js') && !f.includes('-new'));
+  for (const file of commandFiles) {
+    const command = require(path.join(folderPath, file));
+    if (command?.data?.name) {
+      client.commands.set(command.data.name, command);
+    }
+  }
+}
+
+// Load new Riffy-based commands
+for (const folder of commandFolders) {
+  const folderPath = path.join(commandsPath, folder);
+  const commandFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith('-new.js'));
   for (const file of commandFiles) {
     const command = require(path.join(folderPath, file));
     if (command?.data?.name) {
@@ -87,27 +73,14 @@ process.on('unhandledRejection', (err) => {
   console.error('Unhandled promise rejection:', err);
 });
 
-client.login(BOT_TOKEN);
-
-// Initialize music player
-initMusicPlayer(client);
-
-// ---------- RED EXE dashboard ----------
-const createServer = require('./api/server');
-const PORT = process.env.PORT || 3000;
-const app = createServer(client);
-app.on('error', (err) => {
-  console.error('Dashboard startup failed:', err);
-  process.exit(1);
+// Connect to database
+connectToDatabase().catch(err => {
+  console.error('Database connection failed:', err);
 });
 
-app.listen(PORT, () => {
-  console.log(`🌐 RED EXE dashboard listening on port ${PORT}`);
-}).on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`❌ Port ${PORT} is already in use. Close the existing process or set a different PORT in .env.`);
-    process.exit(1);
-  }
-  console.error('Server error:', err);
-  process.exit(1);
+client.login(BOT_TOKEN);
+
+// Initialize music player with Riffy/Lavalink
+initializePlayer(client).catch(err => {
+  console.error(`${colors.red}Failed to initialize music player:${colors.reset}`, err);
 });

@@ -1,0 +1,104 @@
+{
+  "console": {
+    "mongodb": {
+      "connecting": "Connecting to MongoDB...",
+      "connected": "Connected to MongoDB ✅",
+      "failed": "Failed to connect to MongoDB ❌"
+    },
+    "events": {
+      "rest": {
+        "registering": "Registering slash commands...",
+        "registered": "Commands registered ✅",
+        "commandsFailed": "Failed to register commands ❌"
+      },
+      "interaction": {
+        "unexpectedError": "Unexpected error:"
+      }
+    }
+  },
+  "music": {
+    "play": {
+      "name": "play",
+      "description": "Play a song from YouTube, Spotify, or search query"
+    },
+    "pause": {
+      "name": "pause",
+      "paused": "Paused the music ⏸️",
+      "alreadyPaused": "Music is already paused"
+    },
+    "resume": {
+      "name": "resume",
+      "resumed": "Resumed the music ▶️",
+      "notPaused": "Music is not paused"
+    },
+    "skip": {
+      "name": "skip",
+      "skipped": "Skipped the track ⏭️",
+      "noNext": "No next track in queue"
+    },
+    "stop": {
+      "name": "stop",
+      "stopped": "Stopped the music ⏹️",
+      "notPlaying": "No music is playing"
+    },
+    "queue": {
+      "name": "queue",
+      "empty": "Queue is empty",
+      "current": "Currently Playing",
+      "upNext": "Up Next"
+    },
+    "np": {
+      "name": "np",
+      "nowPlaying": "Now Playing",
+      "notPlaying": "Nothing is playing"
+    },
+    "volume": {
+      "name": "volume",
+      "set": "Volume set to {level}% 🔊"
+    },
+    "search": {
+      "name": "search",
+      "results": "Search Results",
+      "noResults": "No results found"
+    },
+    "autoplay": {
+      "name": "autoplay",
+      "enabled": "Autoplay enabled ✅",
+      "disabled": "Autoplay disabled ❌"
+    },
+    "filters": {
+      "name": "filters",
+      "applied": "Filter applied: {filter}",
+      "cleared": "Filters cleared"
+    },
+    "jump": {
+      "name": "jump",
+      "jumped": "Jumped to track {position}"
+    },
+    "move": {
+      "name": "move",
+      "moved": "Moved track from {from} to {to}"
+    },
+    "remove": {
+      "name": "remove",
+      "removed": "Removed track from queue",
+      "invalidPosition": "Invalid queue position"
+    },
+    "shuffle": {
+      "name": "shuffle",
+      "shuffled": "Queue shuffled 🔀"
+    },
+    "voteskip": {
+      "name": "voteskip",
+      "voted": "You voted to skip",
+      "alreadyVoted": "You already voted"
+    },
+    "playlist": {
+      "name": "playlist",
+      "created": "Playlist created",
+      "removed": "Playlist removed"
+    },
+    "voiceRequired": "You must be in a voice channel",
+    "botPermissions": "I need Connect and Speak permissions"
+  }
+}

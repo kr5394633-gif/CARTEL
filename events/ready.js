@@ -16,7 +16,18 @@ module.exports = {
     console.log(`✅ Logged in as ${client.user.tag} (ID: ${client.user.id})`);
     console.log(`Serving ${client.guilds.cache.size} server(s).`);
 
-    const statuses = config.presence.statuses;
+    // Set bot presence with bot name and default activity
+    if (client.user) {
+      client.user.setPresence({
+        activities: [{ 
+          name: client.user.username || 'Music', 
+          type: ActivityType.Watching 
+        }],
+        status: 'online'
+      }).catch(() => {});
+    }
+
+    const statuses = config.presence?.statuses || [];
     let i = 0;
 
     function setNextPresence() {
@@ -27,7 +38,9 @@ module.exports = {
       i++;
     }
 
-    setNextPresence();
-    setInterval(setNextPresence, config.presence.rotateEveryMs || 10000);
+    if (statuses.length > 0) {
+      setNextPresence();
+      setInterval(setNextPresence, config.presence?.rotateEveryMs || 10000);
+    }
   },
 };

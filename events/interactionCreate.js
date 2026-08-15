@@ -11,7 +11,13 @@ module.exports = {
       if (interaction.isChatInputCommand()) {
         const command = client.commands.get(interaction.commandName);
         if (!command) return;
-        await command.execute(interaction, client);
+        
+        // Support both run (Riffy) and execute (legacy) methods
+        if (command.run) {
+          await command.run(client, interaction);
+        } else if (command.execute) {
+          await command.execute(interaction, client);
+        }
         return;
       }
 
