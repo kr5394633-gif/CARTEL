@@ -2,6 +2,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
+const { initMusicPlayer } = require('./utils/musicPlayer');
 
 // ---------- Pre-flight check ----------
 // If these folders are missing, every deploy has the same symptom: a raw
@@ -32,6 +33,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildModeration, // needed for ban add/remove events
+    GatewayIntentBits.GuildVoiceStates, // needed for music playback
   ],
   partials: [Partials.Message, Partials.Channel, Partials.GuildMember],
 });
@@ -70,6 +72,9 @@ process.on('unhandledRejection', (err) => {
 });
 
 client.login(process.env.BOT_TOKEN);
+
+// Initialize music player
+initMusicPlayer(client);
 
 // ---------- RED EXE dashboard ----------
 const createServer = require('./api/server');

@@ -30,6 +30,24 @@
 
 <main class="console">
 
+  <section class="mini-player" id="miniPlayer">
+    <div class="player-track-info">
+      <div class="player-thumbnail" id="playerThumbnail"></div>
+      <div class="player-text">
+        <div class="player-title" id="playerTitle">No track playing</div>
+        <div class="player-author" id="playerAuthor">—</div>
+      </div>
+    </div>
+    <div class="player-controls">
+      <button class="player-btn" id="btnPause" title="Pause">⏸️</button>
+      <button class="player-btn" id="btnResume" title="Resume">▶️</button>
+      <button class="player-btn" id="btnSkip" title="Skip">⏭️</button>
+      <button class="player-btn" id="btnStop" title="Stop">⏹️</button>
+      <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="80" title="Volume">
+      <button class="player-btn" id="btnLoop" title="Loop">🔁</button>
+    </div>
+  </section>
+
   <section class="readouts" aria-label="Live stats">
     <div class="readout-card">
       <div class="readout-corner tl"></div><div class="readout-corner tr"></div>
@@ -90,6 +108,27 @@
       </div>
     </div>
 
+  </section>
+
+  <section class="grid">
+    <div class="panel commands-panel">
+      <div class="panel-head">
+        <h2>⚡ AVAILABLE COMMANDS</h2>
+      </div>
+      <div class="commands-container" id="commandsContainer">
+        <div class="feed-empty">Loading commands...</div>
+      </div>
+    </div>
+
+    <div class="panel servers-panel">
+      <div class="panel-head">
+        <h2>🛡️ SERVERS OVERVIEW</h2>
+        <span class="panel-head-sub" id="serversCount">0 servers</span>
+      </div>
+      <div class="servers-list" id="serversList">
+        <div class="feed-empty">Loading servers...</div>
+      </div>
+    </div>
   </section>
 
 </main>

@@ -15,6 +15,18 @@ const els = {
   whitelistCount: document.getElementById('whitelistCount'),
   configList: document.getElementById('configList'),
   lastUpdated: document.getElementById('lastUpdated'),
+  commandsContainer: document.getElementById('commandsContainer'),
+  serversList: document.getElementById('serversList'),
+  serversCount: document.getElementById('serversCount'),
+  playerThumbnail: document.getElementById('playerThumbnail'),
+  playerTitle: document.getElementById('playerTitle'),
+  playerAuthor: document.getElementById('playerAuthor'),
+  btnPause: document.getElementById('btnPause'),
+  btnResume: document.getElementById('btnResume'),
+  btnSkip: document.getElementById('btnSkip'),
+  btnStop: document.getElementById('btnStop'),
+  volumeSlider: document.getElementById('volumeSlider'),
+  btnLoop: document.getElementById('btnLoop'),
 };
 
 let selectedGuildId = null;
@@ -160,6 +172,125 @@ async function loadConfigSummary() {
   }
 }
 
+async function loadCommands() {
+  try {
+    const commands = await fetchJSON('/api/commands');
+    let html = '';
+
+    for (const [category, cmds] of Object.entries(commands)) {
+      if (cmds.length === 0) continue;
+      html += `<div class="command-category"><span class="category-name">${category.toUpperCase()}</span>`;
+      html += cmds.map((cmd) => `<div class="command-item" title="${escapeHTML(cmd.description)}"><span class="cmd-name">/${cmd.name}</span> <span class="cmd-desc">${escapeHTML(cmd.description)}</span></div>`).join('');
+      html += '</div>';
+    }
+
+    els.commandsContainer.innerHTML = html || '<div class="feed-empty">No commands available.</div>';
+  } catch (err) {
+    console.error('Failed to load commands:', err);
+  }
+}
+
+async function loadServersOverview() {
+  try {
+    const servers = await fetchJSON('/api/servers-overview');
+    els.serversCount.textContent = `${servers.length} server${servers.length === 1 ? '' : 's'}`;
+
+    if (servers.length === 0) {
+      els.serversList.innerHTML = '<div class="feed-empty">No servers connected yet.</div>';
+      return;
+    }
+
+    els.serversList.innerHTML = servers
+      .map((srv) => {
+        const security = srv.features;
+        const secCount = Object.values(security).filter(Boolean).length;
+        return `
+      <div class="server-item">
+        ${srv.icon ? `<img class="server-icon" src="${srv.icon}" alt="" />` : '<div class="server-icon-placeholder"></div>'}
+        <div class="server-info">
+          <div class="server-name">${escapeHTML(srv.name)}</div>
+          <div class="server-meta">${srv.memberCount} members • ${secCount}/4 protection</div>
+          <div class="server-features">
+            ${security.antiRaid ? '<span class="feature-badge raid">RAID</span>' : ''}
+            ${security.antiNuke ? '<span class="feature-badge nuke">NUKE</span>' : ''}
+            ${security.antiSpam ? '<span class="feature-badge spam">SPAM</span>' : ''}
+            ${security.verification ? '<span class="feature-badge verify">VERIFY</span>' : ''}
+          </div>
+        </div>
+      </div>`;
+      })
+      .join('');
+  } catch (err) {
+    console.error('Failed to load servers overview:', err);
+  }
+}
+
+async function loadMusicStatus() {
+  try {
+    const status = await fetchJSON('/api/music/status');
+    
+    if (!status.track) {
+      els.playerTitle.textContent = 'No track playing';
+      els.playerAuthor.textContent = '—';
+      els.playerThumbnail.innerHTML = '<div class="placeholder">♪</div>';
+      return;
+    }
+
+    els.playerTitle.textContent = status.track.title;
+    els.playerAuthor.textContent = status.track.author || '—';
+    
+    if (status.track.thumbnail) {
+      els.playerThumbnail.innerHTML = `<img src="${status.track.thumbnail}" alt="Track thumbnail">`;
+    } else {
+      els.playerThumbnail.innerHTML = '<div class="placeholder">♪</div>';
+    }
+
+    els.volumeSlider.value = status.volume || 80;
+    
+    // Update loop button color based on mode
+    if (status.loop === 'off') {
+      els.btnLoop.textContent = '🔁';
+      els.btnLoop.style.opacity = '0.6';
+    } else if (status.loop === 'track') {
+      els.btnLoop.textContent = '🔂';
+      els.btnLoop.style.opacity = '1';
+    } else {
+      els.btnLoop.textContent = '🔁';
+      els.btnLoop.style.opacity = '1';
+    }
+
+    // Show/hide pause/resume buttons based on state
+    els.btnPause.style.display = status.paused ? 'none' : 'inline-block';
+    els.btnResume.style.display = status.paused ? 'inline-block' : 'none';
+  } catch (err) {
+    console.error('Failed to load music status:', err);
+  }
+}
+
+async function musicControl(action) {
+  try {
+    const endpoint = `/api/music/${action}`;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (res.ok) {
+      loadMusicStatus();
+    }
+  } catch (err) {
+    console.error(`Music control error (${action}):`, err);
+  }
+}
+
+function formatDuration(ms) {
+  if (!ms) return '0:00';
+  const totalSecs = Math.floor(ms / 1000);
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 function escapeHTML(str) {
   const div = document.createElement('div');
   div.textContent = str ?? '';
@@ -170,6 +301,7 @@ function tick() {
   loadStats();
   loadFeed();
   loadWhitelist();
+  loadMusicStatus();
   els.lastUpdated.textContent = `Last updated ${new Date().toLocaleTimeString()}`;
 }
 
@@ -179,9 +311,33 @@ els.guildSelect.addEventListener('change', (e) => {
   loadWhitelist();
 });
 
+// Music control button listeners
+els.btnPause.addEventListener('click', () => musicControl('pause'));
+els.btnResume.addEventListener('click', () => musicControl('resume'));
+els.btnSkip.addEventListener('click', () => musicControl('skip'));
+els.btnStop.addEventListener('click', () => musicControl('stop'));
+els.btnLoop.addEventListener('click', () => musicControl('loop'));
+
+els.volumeSlider.addEventListener('change', async (e) => {
+  const volume = parseInt(e.target.value, 10);
+  try {
+    await fetch('/api/music/volume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ volume }),
+    });
+  } catch (err) {
+    console.error('Volume control error:', err);
+  }
+});
+
 (async function init() {
   await loadGuilds();
   await loadConfigSummary();
+  await loadCommands();
+  await loadServersOverview();
+  await loadMusicStatus();
   tick();
   setInterval(tick, REFRESH_MS);
+  setInterval(loadServersOverview, REFRESH_MS);
 })();
