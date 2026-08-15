@@ -63,19 +63,33 @@ module.exports = {
 
       if (cmd === 'join') {
         const voiceChannel = message.member?.voice?.channel;
+        const botMember = message.guild.members.me;
 
-        if (!voiceChannel || !voiceChannel.joinable) {
-          return message.reply('You must be in a voice channel and I must have permission to join it.');
+        if (!voiceChannel) {
+          return message.reply('Join a voice channel first, then use `<join`.');
+        }
+
+        if (!botMember) {
+          return message.reply('The bot member is not available yet. Try again in a moment.');
+        }
+
+        const botPermissions = botMember.permissionsIn(voiceChannel);
+        if (!botPermissions.has('Connect') || !botPermissions.has('Speak')) {
+          return message.reply('I need **Connect** and **Speak** permissions in that voice channel.');
+        }
+
+        if (!voiceChannel.joinable || voiceChannel.full) {
+          return message.reply('That voice channel is not joinable right now.');
         }
 
         try {
-          if (message.guild.members.me?.voice?.channelId !== voiceChannel.id) {
+          if (botMember.voice?.channelId !== voiceChannel.id) {
             await voiceChannel.join();
           }
           return message.reply(`Joined **${voiceChannel.name}**.`);
         } catch (error) {
           console.error('Join prefix command error:', error);
-          return message.reply('I could not join that voice channel.');
+          return message.reply('I could not join that voice channel. Please check bot permissions and voice channel status.');
         }
       }
 
