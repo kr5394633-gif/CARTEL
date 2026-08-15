@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, ChannelType } = require('discord.js');
-const { getMusicPlayer } = require('../../utils/musicPlayer');
 const { createEmbed } = require('../../utils/embeds');
+const { getLavalinkManager } = require('../../lavalink');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -18,7 +18,6 @@ module.exports = {
     await interaction.deferReply();
 
     try {
-      const player = getMusicPlayer();
       const targetChannel = interaction.options.getChannel('channel') || interaction.member?.voice?.channel;
 
       if (!targetChannel || !targetChannel.isVoiceBased()) {
@@ -30,9 +29,21 @@ module.exports = {
         return interaction.editReply({ embeds: [embed] });
       }
 
-      const queue = player.nodes.create(interaction.guild);
-      if (!queue.connection) {
-        queue.connect(targetChannel);
+      const manager = getLavalinkManager();
+      const riffy = manager.getRiffy();
+      
+      let player = riffy.players.get(interaction.guildId);
+      if (!player) {
+        player = riffy.createPlayer({
+          guildId: interaction.guildId,
+          voiceChannelId: targetChannel.id,
+          textChannelId: interaction.channelId,
+          deaf: true,
+        });
+      }
+
+      if (!player.connected) {
+        await player.connect();
       }
 
       const embed = createEmbed({

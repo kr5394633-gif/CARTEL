@@ -1,63 +1,56 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getMusicPlayer } = require('../../utils/musicPlayer');
-const { createEmbed } = require('../../utils/embeds');
+const { checkVoiceChannel } = require('../../utils/voiceChannelCheck');
+const { safeDeferReply, handleCommandError } = require('../../utils/responseHandler');
+const { getLang } = require('../../utils/languageLoader');
+const { getLavalinkManager } = require('../../lavalink');
+
+const data = new SlashCommandBuilder()
+  .setName('queue')
+  .setDescription('Show the current music queue');
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('queue')
-    .setDescription('Show the current music queue'),
-
-  async execute(interaction) {
-    await interaction.deferReply();
-
+  data,
+  run: async (client, interaction) => {
     try {
-      const player = getMusicPlayer();
-      const queue = player.nodes.get(interaction.guild);
-
-      if (!queue || !queue.isPlaying()) {
-        const embed = createEmbed({
-          title: '❌ Error',
-          description: 'No song is currently playing.',
-          color: '#FF0000',
-        });
-        return interaction.editReply({ embeds: [embed] });
+      await safeDeferReply(interaction);
+      
+      const manager = getLavalinkManager();
+      const player = manager.getRiffy().players.get(interaction.guildId);
+      
+      if (!player?.current) {
+        return interaction.editReply('❌ No music is playing');
       }
 
-      const currentTrack = queue.currentTrack;
-      const tracks = queue.tracks.slice(0, 10);
-
-      let description = `**Currently Playing:**\n🎵 **${currentTrack.title}**\n\n`;
-
-      if (tracks.length > 0) {
-        description += '**Up Next:**\n';
-        tracks.forEach((track, idx) => {
-          description += `${idx + 1}. **${track.title}** (${track.duration ? Math.floor(track.duration / 1000) + 's' : 'Live'})\n`;
+      let description = `**Now Playing:**\n🎵 **${player.current.title}**\n\n`;
+      
+      if (player.queue.length > 0) {
+        description += '**Queue:**\n';
+        player.queue.slice(0, 10).forEach((track, i) => {
+          description += `${i + 1}. **${track.title}** (${formatDuration(track.duration)})\n`;
         });
-
-        if (queue.tracks.length > 10) {
-          description += `\n*... and ${queue.tracks.length - 10} more songs*`;
+        
+        if (player.queue.length > 10) {
+          description += `\n*... and ${player.queue.length - 10} more*`;
         }
       } else {
-        description += '**No songs in queue after this one.**';
+        description += '**Queue is empty**';
       }
 
-      const embed = createEmbed({
-        title: '🎵 Music Queue',
-        description: description,
-        fields: [
-          { name: 'Total Tracks', value: `${queue.tracks.length + 1}`, inline: true },
-          { name: 'Total Duration', value: `${Math.floor((queue.estimatedPlayingTime + currentTrack.duration) / 1000)}s`, inline: true },
-        ],
+      return interaction.editReply({
+        content: description,
+        components: []
       });
-
-      interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      const embed = createEmbed({
-        title: '❌ Error',
-        description: 'An error occurred while fetching the queue.',
-        color: '#FF0000',
-      });
-      interaction.editReply({ embeds: [embed] });
+      await handleCommandError(interaction, error);
     }
-  },
+  }
 };
+
+function formatDuration(ms) {
+  const seconds = Math.floor((ms / 1000) % 60);
+  const minutes = Math.floor((ms / (1000 * 60)) % 60);
+  const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
+  
+  if (hours > 0) return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}

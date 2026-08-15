@@ -1,62 +1,45 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getMusicPlayer } = require('../../utils/musicPlayer');
-const { createEmbed } = require('../../utils/embeds');
+const { safeDeferReply, handleCommandError } = require('../../utils/responseHandler');
+const { getLavalinkManager } = require('../../lavalink');
+
+const data = new SlashCommandBuilder()
+  .setName('search')
+  .setDescription('Search for a song and select from results')
+  .addStringOption(option =>
+    option.setName('query')
+      .setDescription('Song name or artist')
+      .setRequired(true)
+  );
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('search')
-    .setDescription('Search for a song and play the first result')
-    .addStringOption((option) =>
-      option
-        .setName('query')
-        .setDescription('Song name or URL to search for')
-        .setRequired(true)
-    ),
-
-  async execute(interaction) {
-    await interaction.deferReply();
-
+  data,
+  run: async (client, interaction) => {
     try {
-      const player = getMusicPlayer();
+      await safeDeferReply(interaction);
+      
       const query = interaction.options.getString('query');
-      const voiceChannel = interaction.member?.voice?.channel;
-
-      if (!voiceChannel) {
-        const embed = createEmbed({
-          title: '❌ Join a voice channel',
-          description: 'You must be in a voice channel before searching music.',
-          color: '#FF0000',
-        });
-        return interaction.editReply({ embeds: [embed] });
+      const manager = getLavalinkManager();
+      const riffy = manager.getRiffy();
+      
+      const result = await riffy.resolve({ query, requester: interaction.user });
+      
+      if (!result || !result.tracks.length) {
+        return interaction.editReply('❌ No results found');
       }
 
-      const queue = player.nodes.create(interaction.guild);
-      if (!queue.connection) {
-        queue.connect(voiceChannel);
-      }
-
-      queue.metadata = { channel: interaction.channel };
-      const result = await queue.play(query, { searchEngine: 'auto' });
-      const track = result.track;
-
-      const embed = createEmbed({
-        title: '🎵 Added to Queue',
-        description: `**${track.title}**`,
-        fields: [
-          { name: 'Author', value: track.author || 'Unknown', inline: true },
-          { name: 'Duration', value: track.duration ? `${Math.floor(track.duration / 1000)}s` : 'Live', inline: true },
-        ],
+      const tracks = result.tracks.slice(0, 5);
+      let description = '**Search Results:**\n\n';
+      
+      tracks.forEach((track, i) => {
+        description += `${i + 1}. **${track.title}** - ${track.author}\n`;
       });
 
-      return interaction.editReply({ embeds: [embed] });
+      return interaction.editReply({
+        content: description,
+        components: []
+      });
     } catch (error) {
-      console.error('Search command error:', error);
-      const embed = createEmbed({
-        title: '❌ Search failed',
-        description: 'No track could be found for that query.',
-        color: '#FF0000',
-      });
-      return interaction.editReply({ embeds: [embed] });
+      await handleCommandError(interaction, error);
     }
-  },
+  }
 };

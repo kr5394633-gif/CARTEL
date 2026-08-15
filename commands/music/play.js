@@ -1,72 +1,65 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getMusicPlayer } = require('../../utils/musicPlayer');
-const { createEmbed } = require('../../utils/embeds');
-const { logger } = require('../../utils/logger');
+const { checkVoiceChannel } = require('../../utils/voiceChannelCheck');
+const { safeDeferReply, handleCommandError } = require('../../utils/responseHandler');
+const { getLang } = require('../../utils/languageLoader');
+const { getLavalinkManager } = require('../../lavalink');
+
+const data = new SlashCommandBuilder()
+  .setName('play')
+  .setDescription('Play a song from YouTube, Spotify, or search query')
+  .addStringOption(option =>
+    option.setName('query')
+      .setDescription('Song name, URL, or Spotify link')
+      .setRequired(true)
+  );
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('play')
-    .setDescription('Play a song from YouTube or search')
-    .addStringOption((option) =>
-      option.setName('query').setDescription('Song name or YouTube URL').setRequired(true)
-    ),
-
-  async execute(interaction) {
-    await interaction.deferReply();
-
+  data,
+  run: async (client, interaction) => {
     try {
-      const player = getMusicPlayer();
+      await safeDeferReply(interaction);
+      const lang = await getLang(interaction.guildId);
       const query = interaction.options.getString('query');
-      const voiceChannel = interaction.member?.voice?.channel;
-
-      if (!voiceChannel) {
-        const embed = createEmbed({
-          title: '❌ Error',
-          description: 'You must be in a voice channel to play music.',
-          color: '#FF0000',
-        });
-        return interaction.editReply({ embeds: [embed] });
+      
+      const voiceCheck = await checkVoiceChannel(interaction);
+      if (!voiceCheck.allowed) {
+        return interaction.editReply(`❌ ${voiceCheck.error}`);
       }
 
-      const queue = player.nodes.create(interaction.guild);
-      if (!queue.connection) {
-        queue.connect(voiceChannel);
+      const manager = getLavalinkManager();
+      const riffy = manager.getRiffy();
+      
+      let player = riffy.players.get(interaction.guildId);
+      if (!player) {
+        player = riffy.createPlayer({
+          guildId: interaction.guildId,
+          voiceChannelId: voiceCheck.voiceChannel.id,
+          textChannelId: interaction.channelId,
+          deaf: true,
+        });
+        player.data = { channel: interaction.channel };
       }
 
-      queue.metadata = { channel: interaction.channel };
-
-      try {
-        const { track } = await queue.play(query, {
-          requestedBy: interaction.user,
-          searchEngine: 'auto',
-        });
-
-        const embed = createEmbed({
-          title: '🎵 Track Added',
-          description: `**${track.title}**`,
-          fields: [
-            { name: 'Duration', value: track.duration ? `${Math.floor(track.duration / 1000)}s` : 'Live', inline: true },
-            { name: 'Queue Position', value: `${queue.tracks.length}`, inline: true },
-          ],
-        });
-        interaction.editReply({ embeds: [embed] });
-      } catch (error) {
-        logger.error('Error playing track:', error);
-        const embed = createEmbed({
-          title: '❌ Error',
-          description: 'Could not find or play that track. Try a different search query.',
-          color: '#FF0000',
-        });
-        interaction.editReply({ embeds: [embed] });
+      if (!player.connected) {
+        await player.connect();
       }
+
+      const result = await riffy.resolve({ query, requester: interaction.user });
+      
+      if (!result || !result.tracks.length) {
+        return interaction.editReply('❌ No results found');
+      }
+
+      const track = result.tracks[0];
+      player.queue.add(track);
+      
+      if (!player.playing && !player.paused) {
+        await player.play();
+      }
+
+      return interaction.editReply(`✅ Added: **${track.title}** to queue`);
     } catch (error) {
-      logger.error('Play command error:', error);
-      const embed = createEmbed({
-        title: '❌ Error',
-        description: 'An error occurred while processing your request.',
-        color: '#FF0000',
-      });
-      interaction.editReply({ embeds: [embed] });
+      await handleCommandError(interaction, error);
     }
-  },
+  }
 };

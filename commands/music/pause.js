@@ -1,42 +1,39 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getMusicPlayer } = require('../../utils/musicPlayer');
-const { createEmbed } = require('../../utils/embeds');
+const { checkVoiceChannel } = require('../../utils/voiceChannelCheck');
+const { safeDeferReply, handleCommandError } = require('../../utils/responseHandler');
+const { getLang } = require('../../utils/languageLoader');
+const { getLavalinkManager } = require('../../lavalink');
+
+const data = new SlashCommandBuilder()
+  .setName('pause')
+  .setDescription('Pause the current song');
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('pause')
-    .setDescription('Pause the current song'),
-
-  async execute(interaction) {
-    await interaction.deferReply();
-
+  data,
+  run: async (client, interaction) => {
     try {
-      const player = getMusicPlayer();
-      const queue = player.nodes.get(interaction.guild);
-
-      if (!queue || !queue.isPlaying()) {
-        const embed = createEmbed({
-          title: '❌ Error',
-          description: 'No song is currently playing.',
-          color: '#FF0000',
-        });
-        return interaction.editReply({ embeds: [embed] });
+      await safeDeferReply(interaction);
+      
+      const voiceCheck = await checkVoiceChannel(interaction);
+      if (!voiceCheck.allowed) {
+        return interaction.editReply(`❌ ${voiceCheck.error}`);
       }
 
-      queue.node.setPaused(true);
+      const manager = getLavalinkManager();
+      const player = manager.getRiffy().players.get(interaction.guildId);
+      
+      if (!player?.playing) {
+        return interaction.editReply('❌ No music is playing');
+      }
 
-      const embed = createEmbed({
-        title: '⏸️ Paused',
-        description: `**${queue.currentTrack.title}** has been paused.`,
-      });
-      interaction.editReply({ embeds: [embed] });
+      if (player.paused) {
+        return interaction.editReply('❌ Music is already paused');
+      }
+
+      player.pause(true);
+      return interaction.editReply(`⏸️ Paused: **${player.current?.title}**`);
     } catch (error) {
-      const embed = createEmbed({
-        title: '❌ Error',
-        description: 'An error occurred while pausing the song.',
-        color: '#FF0000',
-      });
-      interaction.editReply({ embeds: [embed] });
+      await handleCommandError(interaction, error);
     }
-  },
+  }
 };

@@ -1,52 +1,37 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getMusicPlayer } = require('../../utils/musicPlayer');
-const { createEmbed } = require('../../utils/embeds');
+const { checkVoiceChannel } = require('../../utils/voiceChannelCheck');
+const { safeDeferReply, handleCommandError } = require('../../utils/responseHandler');
+const { getLang } = require('../../utils/languageLoader');
+const { getLavalinkManager } = require('../../lavalink');
+
+const data = new SlashCommandBuilder()
+  .setName('skip')
+  .setDescription('Skip the current song');
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('skip')
-    .setDescription('Skip to the next song in the queue'),
-
-  async execute(interaction) {
-    await interaction.deferReply();
-
+  data,
+  run: async (client, interaction) => {
     try {
-      const player = getMusicPlayer();
-      const queue = player.nodes.get(interaction.guild);
-
-      if (!queue || !queue.isPlaying()) {
-        const embed = createEmbed({
-          title: '❌ Error',
-          description: 'No song is currently playing.',
-          color: '#FF0000',
-        });
-        return interaction.editReply({ embeds: [embed] });
+      await safeDeferReply(interaction);
+      
+      const voiceCheck = await checkVoiceChannel(interaction);
+      if (!voiceCheck.allowed) {
+        return interaction.editReply(`❌ ${voiceCheck.error}`);
       }
 
-      if (queue.tracks.length === 0) {
-        const embed = createEmbed({
-          title: '❌ Error',
-          description: 'There are no more songs in the queue.',
-          color: '#FF0000',
-        });
-        return interaction.editReply({ embeds: [embed] });
+      const manager = getLavalinkManager();
+      const player = manager.getRiffy().players.get(interaction.guildId);
+      
+      if (!player?.playing) {
+        return interaction.editReply('❌ No music is playing');
       }
 
-      const skipped = queue.currentTrack;
-      queue.node.skip();
-
-      const embed = createEmbed({
-        title: '⏭️ Skipped',
-        description: `**${skipped.title}** has been skipped.`,
-      });
-      interaction.editReply({ embeds: [embed] });
+      const current = player.current;
+      player.stop();
+      
+      return interaction.editReply(`⏭️ Skipped: **${current?.title || 'Track'}**`);
     } catch (error) {
-      const embed = createEmbed({
-        title: '❌ Error',
-        description: 'An error occurred while skipping the song.',
-        color: '#FF0000',
-      });
-      interaction.editReply({ embeds: [embed] });
+      await handleCommandError(interaction, error);
     }
-  },
+  }
 };
