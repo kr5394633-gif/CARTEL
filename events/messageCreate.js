@@ -61,6 +61,24 @@ module.exports = {
         );
       }
 
+      if (cmd === 'join') {
+        const voiceChannel = message.member?.voice?.channel;
+
+        if (!voiceChannel || !voiceChannel.joinable) {
+          return message.reply('You must be in a voice channel and I must have permission to join it.');
+        }
+
+        try {
+          if (message.guild.members.me?.voice?.channelId !== voiceChannel.id) {
+            await voiceChannel.join();
+          }
+          return message.reply(`Joined **${voiceChannel.name}**.`);
+        } catch (error) {
+          console.error('Join prefix command error:', error);
+          return message.reply('I could not join that voice channel.');
+        }
+      }
+
       if (cmd === 'play') {
         const query = args.join(' ');
         if (!query) {
