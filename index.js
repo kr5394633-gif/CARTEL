@@ -1,9 +1,22 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { connectToDatabase } = require('./mongodb');
 const colors = require('./utils/colors');
+
+const PORT = process.env.PORT || 3000;
+const server = http.createServer((req, res) => {
+  if (req.url === '/health' || req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
+  } else {
+    res.writeHead(404);
+    res.end('Not found');
+  }
+});
+server.listen(PORT, () => console.log(`✅ HTTP server listening on port ${PORT}`));
 
 // ---------- Pre-flight check ----------
 const REQUIRED_DIRS = ['commands', 'events', 'utils', 'api', 'public'];

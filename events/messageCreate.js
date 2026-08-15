@@ -48,7 +48,6 @@ module.exports = {
 
     const trimmed = message.content.trim();
 
-    // Ignore regular mention pings like <@123456789> so they aren't mistaken for prefix commands.
     if (/^<@!?(\d+)>$/.test(trimmed) || /^<@!?(\d+)>(\s|$)/.test(trimmed)) {
       return;
     }
@@ -62,7 +61,6 @@ module.exports = {
       const [command, ...args] = input.split(/\s+/);
       const cmd = command.toLowerCase();
 
-      // ━━━ UTILITY COMMANDS ━━━
       if (cmd === 'help') {
         return message.reply(listTextCommands());
       }
@@ -87,7 +85,43 @@ module.exports = {
         );
       }
 
-      // ━━━ MUSIC COMMANDS ━━━
+      if (cmd === 'join') {
+        const voiceChannel = message.member?.voice?.channel;
+        const botMember = message.guild.members.me;
+
+        if (!voiceChannel) {
+          return message.reply('Join a voice channel first, then use `<join`.');
+        }
+
+        if (!botMember) {
+          return message.reply('The bot member is not available yet. Try again in a moment.');
+        }
+
+        const botPermissions = botMember.permissionsIn(voiceChannel);
+        if (!botPermissions.has('Connect') || !botPermissions.has('Speak')) {
+          return message.reply('I need **Connect** and **Speak** permissions in that voice channel.');
+        }
+
+        if (!voiceChannel.joinable || voiceChannel.full) {
+          return message.reply('That voice channel is not joinable right now.');
+        }
+
+        try {
+          if (botMember.voice?.channelId !== voiceChannel.id) {
+            const { joinVoiceChannel } = require('@discordjs/voice');
+            const connection = joinVoiceChannel({
+              channelId: voiceChannel.id,
+              guildId: message.guild.id,
+              adapterCreator: message.guild.voiceAdapterCreator,
+            });
+          }
+          return message.reply(`Joined **${voiceChannel.name}**.`);
+        } catch (error) {
+          console.error('Join prefix command error:', error);
+          return message.reply('I could not join that voice channel. Please check bot permissions and voice channel status.');
+        }
+      }
+
       if (cmd === 'play') {
         const query = args.join(' ');
         if (!query) {
@@ -175,7 +209,6 @@ module.exports = {
         }
       }
 
-      // ━━━ VOLUME COMMANDS ━━━
       if (cmd === 'volume') {
         const volStr = args[0];
         if (!volStr) {
@@ -197,7 +230,6 @@ module.exports = {
         return message.reply(`🔊 Volume set to **${volume}/10000** (${Math.round(percentage)}%)${effectText}\n[${volumeBar}]`);
       }
 
-      // ━━━ SYSTEM MODE ━━━
       if (cmd === 'system') {
         try {
           const status = await musicPlayer.getPlayerStatus(message.guildId);
@@ -230,7 +262,6 @@ module.exports = {
         return message.reply(`⚡ System Mode intensity set to **${intensity}x** (${Math.round(intensity * 100)}%)\n*Power level increasing...*`);
       }
 
-      // ━━━ BLAST MODE ━━━
       if (cmd === 'blast') {
         try {
           const status = await musicPlayer.getPlayerStatus(message.guildId);
@@ -263,7 +294,6 @@ module.exports = {
         return message.reply(`🔥 Blast Mode intensity set to **${intensity}%**`);
       }
 
-      // ━━━ AUDIO EFFECTS ━━━
       if (cmd === 'bassboost') {
         const modes = musicPlayer.getModes(message.guildId);
         const newState = !modes.bassBoost;
@@ -300,7 +330,6 @@ module.exports = {
         return message.reply(`🔇 Noise Suppression: ${newState ? '✅ ON' : '❌ OFF'}`);
       }
 
-      // ━━━ LOUD MODE ━━━
       if (cmd === 'loudmode') {
         try {
           const status = await musicPlayer.getPlayerStatus(message.guildId);
@@ -333,7 +362,6 @@ module.exports = {
         return message.reply(`🔊 Loud Mode boost set to **${boost}x**`);
       }
 
-      // ━━━ VOICE MODE ━━━
       if (cmd === 'mode') {
         const mode = args[0];
         if (!mode) {
@@ -347,15 +375,12 @@ module.exports = {
         return message.reply(`🎤 Voice Mode set to **${mode}**`);
       }
 
-      // ━━━ UNKNOWN COMMAND ━━━
       return message.reply(`❌ Unknown command: \`${command}\`\nUse \`<help\` to see all available commands.`);
     }
 
-    // Bad-word filter runs first (deletes + warns + escalates)
     const flaggedByAutoMod = await autoMod.handleMessage(message);
     if (flaggedByAutoMod) return;
 
-    // Then spam/invite/mention checks
     await antiSpam.handleMessage(message);
   },
 };

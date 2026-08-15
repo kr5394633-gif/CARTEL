@@ -21,7 +21,6 @@ class LavalinkNodeManager {
 
   async initializeRiffy() {
     try {
-      // Check if bot is logged in and has user ID
       if (!this.client.user?.id) {
         throw new Error('Bot not logged in. Cannot initialize Riffy. Please ensure bot is ready before calling initializeRiffy.');
       }
@@ -41,7 +40,6 @@ class LavalinkNodeManager {
         autoResume: true
       });
 
-      // Setup event handlers
       this.riffy.on('nodeConnect', (node) => {
         console.log(`${colors.cyan}[ LAVALINK ]${colors.reset} ${colors.green}Node ${node.name} connected${colors.reset}`);
       });
