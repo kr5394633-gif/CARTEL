@@ -12,12 +12,11 @@ module.exports = {
       const command = trimmed.slice(prefix.length).trim().toLowerCase();
 
       if (!command) {
-        return message.reply('Prefix is set to `<'`.
-Use slash commands like `/help` or text commands like `<help` and `<ping`.');
+        return message.reply("Prefix is set to `<`.\nUse slash commands like `/help` or text commands like `<help` and `<ping`.");
       }
 
       if (command === 'help') {
-        return message.reply('Use slash commands for the bot. Example: `/help`, `/play`, `/security-status`\nLegacy prefix commands are enabled with `<` as the prefix.');
+        return message.reply("Use slash commands for the bot. Example: `/help`, `/play`, `/security-status`\nLegacy prefix commands are enabled with `<` as the prefix.");
       }
 
       if (command === 'ping') {
