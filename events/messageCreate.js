@@ -84,7 +84,12 @@ module.exports = {
 
         try {
           if (botMember.voice?.channelId !== voiceChannel.id) {
-            await voiceChannel.join();
+            const { joinVoiceChannel } = require('@discordjs/voice');
+            const connection = joinVoiceChannel({
+              channelId: voiceChannel.id,
+              guildId: message.guild.id,
+              adapterCreator: message.guild.voiceAdapterCreator,
+            });
           }
           return message.reply(`Joined **${voiceChannel.name}**.`);
         } catch (error) {
