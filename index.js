@@ -79,8 +79,3 @@ connectToDatabase().catch(err => {
 });
 
 client.login(BOT_TOKEN);
-
-// Initialize music player with Riffy/Lavalink
-initializePlayer(client).catch(err => {
-  console.error(`${colors.red}Failed to initialize music player:${colors.reset}`, err);
-});

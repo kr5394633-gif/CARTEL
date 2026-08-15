@@ -11,6 +11,11 @@ class LavalinkNodeManager {
 
   async initializeRiffy() {
     try {
+      // Check if bot is logged in and has user ID
+      if (!this.client.user?.id) {
+        throw new Error('Bot not logged in. Cannot initialize Riffy. Please ensure bot is ready before calling initializeRiffy.');
+      }
+
       this.riffy = new Riffy(this.client, config.nodes, {
         send: (guildId, payload) => {
           const guild = this.client.guilds.cache.get(guildId);

@@ -1,6 +1,7 @@
 const config = require('./config-music.json');
 const { initializeLavalinkManager } = require('./lavalink');
 const colors = require('./utils/colors');
+const { ActivityType } = require('discord.js');
 
 async function initializePlayer(client) {
   try {
@@ -11,7 +12,7 @@ async function initializePlayer(client) {
     riffy.on('trackStart', (player, track) => {
       if (client.user) {
         client.user.setPresence({
-          activities: [{ name: `🎵 ${track.title}`, type: 'PLAYING' }],
+          activities: [{ name: `🎵 ${track.title}`, type: ActivityType.Playing }],
           status: 'online'
         }).catch(() => {});
       }
@@ -20,7 +21,7 @@ async function initializePlayer(client) {
     riffy.on('trackEnd', (player) => {
       if (client.user && !player.queue.length) {
         client.user.setPresence({
-          activities: [{ name: config.activityName || '🎵 Music', type: config.activityType || 'LISTENING' }],
+          activities: [{ name: config.activityName || '🎵 Music', type: ActivityType.Listening }],
           status: 'online'
         }).catch(() => {});
       }
