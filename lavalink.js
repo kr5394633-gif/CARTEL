@@ -2,6 +2,16 @@ const { Riffy } = require('riffy');
 const config = require('./config-music.json');
 const colors = require('./utils/colors');
 
+const envNode = {
+  name: process.env.LAVALINK_NAME || 'Lavalink',
+  host: process.env.LAVALINK_HOST || (config.nodes && config.nodes[0]?.host) || '',
+  port: Number(process.env.LAVALINK_PORT || (config.nodes && config.nodes[0]?.port) || 2333),
+  password: process.env.LAVALINK_PASSWORD || (config.nodes && config.nodes[0]?.password) || 'youshallnotpass',
+  secure: process.env.LAVALINK_SECURE === 'true' || (config.nodes && config.nodes[0]?.secure) || false
+};
+
+const resolvedNodes = [];
+
 class LavalinkNodeManager {
   constructor(client) {
     this.client = client;
@@ -16,7 +26,13 @@ class LavalinkNodeManager {
         throw new Error('Bot not logged in. Cannot initialize Riffy. Please ensure bot is ready before calling initializeRiffy.');
       }
 
-      this.riffy = new Riffy(this.client, config.nodes, {
+      if (!resolvedNodes.length) {
+        console.warn(`${colors.cyan}[ LAVALINK ]${colors.reset} ${colors.yellow}No music source configured. Music is disabled.${colors.reset}`);
+        this.riffy = null;
+        return null;
+      }
+
+      this.riffy = new Riffy(this.client, resolvedNodes, {
         send: (guildId, payload) => {
           const guild = this.client.guilds.cache.get(guildId);
           if (guild?.shard) guild.shard.send(payload);
@@ -59,8 +75,11 @@ class LavalinkNodeManager {
 
       return this.riffy;
     } catch (error) {
-      console.error(`${colors.red}Failed to initialize Riffy:${colors.reset}`, error);
-      throw error;
+      const message = error?.message || String(error);
+      console.warn(`${colors.cyan}[ LAVALINK ]${colors.reset} ${colors.yellow}Music node unavailable: ${message}${colors.reset}`);
+      console.warn(`${colors.cyan}[ LAVALINK ]${colors.reset} ${colors.yellow}The configured Lavalink node is not responding. Bot is staying online, but music playback is disabled until a valid Lavalink node is configured.${colors.reset}`);
+      this.riffy = null;
+      return null;
     }
   }
 
