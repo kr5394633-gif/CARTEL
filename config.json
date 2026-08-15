@@ -1,0 +1,66 @@
+{
+  "embedColors": {
+    "success": "#57F287",
+    "warning": "#FEE75C",
+    "danger": "#ED4245",
+    "info": "#5865F2"
+  },
+  "botAvatarGif": "./assets/avatar.gif",
+  "presence": {
+    "rotateEveryMs": 10000,
+    "statuses": [
+      { "type": "Watching", "text": "🛡️ Server Security" },
+      { "type": "Watching", "text": "👁️ Suspicious Activity" },
+      { "type": "Listening", "text": "/help for commands" },
+      { "type": "Playing", "text": "🔒 Anti-Nuke Guardian" }
+    ]
+  },
+  "logChannels": {
+    "modLogs": "mod-logs",
+    "joinLeaveLogs": "join-leave-logs",
+    "messageLogs": "message-logs",
+    "securityAlerts": "security-alerts"
+  },
+  "antiRaid": {
+    "enabled": true,
+    "joinThreshold": 10,
+    "joinWindowMs": 10000,
+    "newAccountAgeDays": 7,
+    "action": "quarantine"
+  },
+  "antiNuke": {
+    "enabled": true,
+    "channelDeleteThreshold": 3,
+    "channelDeleteWindowMs": 10000,
+    "roleDeleteThreshold": 3,
+    "roleDeleteWindowMs": 10000,
+    "banThreshold": 5,
+    "banWindowMs": 10000,
+    "punishment": "stripRolesAndBan"
+  },
+  "antiSpam": {
+    "enabled": true,
+    "messageThreshold": 5,
+    "windowMs": 5000,
+    "muteMinutes": 10,
+    "deleteInvites": true,
+    "deleteMassMentions": true,
+    "massMentionThreshold": 5
+  },
+  "autoMod": {
+    "badWords": ["badword1", "badword2"],
+    "warnEscalation": {
+      "3": "mute_10m",
+      "5": "kick",
+      "7": "ban"
+    }
+  },
+  "verification": {
+    "enabled": true,
+    "unverifiedRole": "Unverified",
+    "verifiedRole": "Verified"
+  },
+  "roles": {
+    "quarantine": "Quarantined"
+  }
+}

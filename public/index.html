@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RED EXE — Security Console</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%230A0A0C%22/><rect x=%2222%22 y=%2222%22 width=%2256%22 height=%2256%22 fill=%22%23FF2E4D%22/></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="scanline" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">RED<span class="brand-block">█</span>EXE</span>
+    <span class="brand-sub">SECURITY CONSOLE</span>
+  </div>
+
+  <div class="topbar-right">
+    <select id="guildSelect" class="guild-select" aria-label="Select server"></select>
+    <div class="status-pill" id="statusPill">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">CONNECTING</span>
+    </div>
+  </div>
+</header>
+
+<main class="console">
+
+  <section class="readouts" aria-label="Live stats">
+    <div class="readout-card">
+      <div class="readout-corner tl"></div><div class="readout-corner tr"></div>
+      <div class="readout-corner bl"></div><div class="readout-corner br"></div>
+      <span class="readout-label">SERVERS GUARDED</span>
+      <span class="readout-value" id="statGuilds">—</span>
+    </div>
+    <div class="readout-card">
+      <div class="readout-corner tl"></div><div class="readout-corner tr"></div>
+      <div class="readout-corner bl"></div><div class="readout-corner br"></div>
+      <span class="readout-label">MEMBERS PROTECTED</span>
+      <span class="readout-value" id="statMembers">—</span>
+    </div>
+    <div class="readout-card">
+      <div class="readout-corner tl"></div><div class="readout-corner tr"></div>
+      <div class="readout-corner bl"></div><div class="readout-corner br"></div>
+      <span class="readout-label">UPTIME</span>
+      <span class="readout-value" id="statUptime">—</span>
+    </div>
+    <div class="readout-card">
+      <div class="readout-corner tl"></div><div class="readout-corner tr"></div>
+      <div class="readout-corner bl"></div><div class="readout-corner br"></div>
+      <span class="readout-label">LATENCY</span>
+      <span class="readout-value" id="statPing">—</span>
+    </div>
+  </section>
+
+  <section class="grid">
+
+    <div class="panel feed-panel">
+      <div class="panel-head">
+        <h2>THREAT FEED</h2>
+        <span class="panel-head-sub" id="feedCount">0 events</span>
+      </div>
+      <div class="feed" id="feed">
+        <div class="feed-empty" id="feedEmpty">No security events logged yet. Standing by.</div>
+      </div>
+    </div>
+
+    <div class="side-col">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>WHITELIST</h2>
+          <span class="panel-head-sub" id="whitelistCount">0 trusted</span>
+        </div>
+        <div class="whitelist" id="whitelist">
+          <div class="feed-empty">No trusted users whitelisted.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>PROTECTION CONFIG</h2>
+        </div>
+        <div class="config-list" id="configList">
+          <div class="feed-empty">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>RED EXE — autonomous server protection</span>
+  <span id="lastUpdated">—</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
