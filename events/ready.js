@@ -1,7 +1,5 @@
 const { ActivityType } = require('discord.js');
 const config = require('../config.json');
-const { initializePlayer } = require('../player');
-const colors = require('../utils/colors');
 
 const ACTIVITY_TYPE_MAP = {
   Playing: ActivityType.Playing,
@@ -31,14 +29,6 @@ module.exports = {
       } catch (error) {
         console.error('Failed to set presence:', error);
       }
-    }
-
-    // Initialize music player with Riffy/Lavalink NOW that bot is logged in
-    try {
-      await initializePlayer(client);
-      console.log(`${colors.green}✅ Music player initialized successfully${colors.reset}`);
-    } catch (err) {
-      console.error(`${colors.red}Failed to initialize music player:${colors.reset}`, err);
     }
 
     const statuses = config.presence?.statuses || [];

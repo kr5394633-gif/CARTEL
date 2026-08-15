@@ -2,7 +2,6 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
-const { initializePlayer } = require('./player');
 const { connectToDatabase } = require('./mongodb');
 const colors = require('./utils/colors');
 
@@ -28,30 +27,19 @@ const client = new Client({
 
 client.config = require('./config-music.json');
 
-// ---------- Load Commands ----------
+// ---------- Load Commands (Prefix-based with < prefix) ----------
 client.commands = new Collection();
+client.PREFIX = '<';
 const commandsPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(commandsPath);
 
 for (const folder of commandFolders) {
   const folderPath = path.join(commandsPath, folder);
-  const commandFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith('.js') && !f.includes('-new'));
+  const commandFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith('.js'));
   for (const file of commandFiles) {
     const command = require(path.join(folderPath, file));
-    if (command?.data?.name) {
-      client.commands.set(command.data.name, command);
-    }
-  }
-}
-
-// Load new Riffy-based commands
-for (const folder of commandFolders) {
-  const folderPath = path.join(commandsPath, folder);
-  const commandFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith('-new.js'));
-  for (const file of commandFiles) {
-    const command = require(path.join(folderPath, file));
-    if (command?.data?.name) {
-      client.commands.set(command.data.name, command);
+    if (command?.name) {
+      client.commands.set(command.name, command);
     }
   }
 }

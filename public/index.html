@@ -11,6 +11,7 @@
 </head>
 <body>
 
+<div class="photo-backdrop" aria-hidden="true"></div>
 <div class="scanline" aria-hidden="true"></div>
 
 <header class="topbar">
@@ -29,48 +30,6 @@
 </header>
 
 <main class="console">
-
-  <section class="mini-player premium" id="miniPlayer">
-    <div class="player-track-info">
-      <div class="player-thumbnail" id="playerThumbnail"></div>
-      <div class="player-text">
-        <div class="player-title" id="playerTitle">No track playing</div>
-        <div class="player-author" id="playerAuthor">—</div>
-        <div class="player-duration" id="playerDuration">0:00</div>
-      </div>
-    </div>
-    <div class="player-controls">
-      <button class="player-btn" id="btnPause" title="Pause">⏸️</button>
-      <button class="player-btn" id="btnResume" title="Resume">▶️</button>
-      <button class="player-btn" id="btnSkip" title="Skip">⏭️</button>
-      <button class="player-btn" id="btnStop" title="Stop">⏹️</button>
-      <button class="player-btn" id="btnLoop" title="Loop">🔁</button>
-    </div>
-  </section>
-
-  <section class="audio-controls premium">
-    <div class="control-section">
-      <div class="control-label">🔊 VOLUME <span id="volValue">50%</span></div>
-      <input type="range" id="volumeAdvanced" class="control-slider" min="1" max="10000" value="5000" title="Volume 1-10000">
-    </div>
-    
-    <div class="control-section">
-      <div class="control-label">🎚️ BASS <span id="bassValue">50%</span></div>
-      <input type="range" id="bassSlider" class="control-slider" min="1" max="100" value="50" title="Bass 1-100">
-    </div>
-
-    <div class="control-section toggle-group">
-      <button class="control-toggle" id="btnVoiceBass" title="Voice Bass">
-        <span class="toggle-label">🗣️ VOICE BASS</span>
-        <span class="toggle-status" id="voiceBassStatus">OFF</span>
-      </button>
-      
-      <button class="control-toggle punk" id="btnPunkMode" title="Punk Mode">
-        <span class="toggle-label">🎸 PUNK MODE</span>
-        <span class="toggle-status" id="punkModeStatus">OFF</span>
-      </button>
-    </div>
-  </section>
 
   <section class="readouts" aria-label="Live stats">
     <div class="readout-card">

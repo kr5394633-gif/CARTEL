@@ -18,23 +18,6 @@ const els = {
   commandsContainer: document.getElementById('commandsContainer'),
   serversList: document.getElementById('serversList'),
   serversCount: document.getElementById('serversCount'),
-  playerThumbnail: document.getElementById('playerThumbnail'),
-  playerTitle: document.getElementById('playerTitle'),
-  playerAuthor: document.getElementById('playerAuthor'),
-  playerDuration: document.getElementById('playerDuration'),
-  btnPause: document.getElementById('btnPause'),
-  btnResume: document.getElementById('btnResume'),
-  btnSkip: document.getElementById('btnSkip'),
-  btnStop: document.getElementById('btnStop'),
-  btnLoop: document.getElementById('btnLoop'),
-  volumeAdvanced: document.getElementById('volumeAdvanced'),
-  volValue: document.getElementById('volValue'),
-  bassSlider: document.getElementById('bassSlider'),
-  bassValue: document.getElementById('bassValue'),
-  btnVoiceBass: document.getElementById('btnVoiceBass'),
-  voiceBassStatus: document.getElementById('voiceBassStatus'),
-  btnPunkMode: document.getElementById('btnPunkMode'),
-  punkModeStatus: document.getElementById('punkModeStatus'),
 };
 
 let selectedGuildId = null;
@@ -233,109 +216,6 @@ async function loadServersOverview() {
   }
 }
 
-async function loadAudioSettings() {
-  try {
-    const settings = await fetchJSON('/api/music/audio-settings');
-
-    const volume = Number(settings.volume ?? settings.defaultVolume ?? 5000);
-    const bass = Number(settings.bass ?? 50);
-    const voiceBass = Boolean(settings.voiceBass);
-    const punkMode = Boolean(settings.punkMode);
-
-    if (els.volumeAdvanced) {
-      els.volumeAdvanced.value = String(Math.max(1, Math.min(10000, volume)));
-      const percent = Math.round((Number(els.volumeAdvanced.value) / 10000) * 100);
-      els.volValue.textContent = `${percent}%`;
-    }
-
-    if (els.bassSlider) {
-      els.bassSlider.value = String(Math.max(1, Math.min(100, bass)));
-      els.bassValue.textContent = `${els.bassSlider.value}%`;
-    }
-
-    if (els.voiceBassStatus) {
-      els.voiceBassStatus.textContent = voiceBass ? 'ON' : 'OFF';
-    }
-    if (els.btnVoiceBass) {
-      els.btnVoiceBass.classList.toggle('active', voiceBass);
-    }
-
-    if (els.punkModeStatus) {
-      els.punkModeStatus.textContent = punkMode ? 'ON' : 'OFF';
-    }
-    if (els.btnPunkMode) {
-      els.btnPunkMode.classList.toggle('active', punkMode);
-    }
-  } catch (err) {
-    console.error('Failed to load audio settings:', err);
-  }
-}
-
-async function loadMusicStatus() {
-  try {
-    const status = await fetchJSON('/api/music/status');
-    
-    if (!status.track) {
-      els.playerTitle.textContent = 'No track playing';
-      els.playerAuthor.textContent = '—';
-      els.playerDuration.textContent = '0:00';
-      els.playerThumbnail.innerHTML = '<div class="placeholder">♪</div>';
-      return;
-    }
-
-    els.playerTitle.textContent = status.track.title;
-    els.playerAuthor.textContent = status.track.author || '—';
-    els.playerDuration.textContent = formatDuration(status.track.duration || 0);
-    
-    if (status.track.thumbnail) {
-      els.playerThumbnail.innerHTML = `<img src="${status.track.thumbnail}" alt="Track thumbnail">`;
-    } else {
-      els.playerThumbnail.innerHTML = '<div class="placeholder">♪</div>';
-    }
-
-    if (els.volumeAdvanced) {
-      const volumeValue = Number(status.volume) || 50;
-      const mappedValue = Math.max(1, Math.min(10000, Math.round((volumeValue / 100) * 10000)));
-      els.volumeAdvanced.value = String(mappedValue);
-      els.volValue.textContent = `${Math.round(volumeValue)}%`;
-    }
-    
-    // Update loop button color based on mode
-    if (status.loop === 'off') {
-      els.btnLoop.textContent = '🔁';
-      els.btnLoop.style.opacity = '0.6';
-    } else if (status.loop === 'track') {
-      els.btnLoop.textContent = '🔂';
-      els.btnLoop.style.opacity = '1';
-    } else {
-      els.btnLoop.textContent = '🔁';
-      els.btnLoop.style.opacity = '1';
-    }
-
-    // Show/hide pause/resume buttons based on state
-    els.btnPause.style.display = status.paused ? 'none' : 'inline-block';
-    els.btnResume.style.display = status.paused ? 'inline-block' : 'none';
-  } catch (err) {
-    console.error('Failed to load music status:', err);
-  }
-}
-
-async function musicControl(action) {
-  try {
-    const endpoint = `/api/music/${action}`;
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    if (res.ok) {
-      loadMusicStatus();
-    }
-  } catch (err) {
-    console.error(`Music control error (${action}):`, err);
-  }
-}
-
 function formatDuration(ms) {
   if (!ms) return '0:00';
   const totalSecs = Math.floor(ms / 1000);
@@ -354,7 +234,6 @@ function tick() {
   loadStats();
   loadFeed();
   loadWhitelist();
-  loadMusicStatus();
   els.lastUpdated.textContent = `Last updated ${new Date().toLocaleTimeString()}`;
 }
 
@@ -364,97 +243,11 @@ els.guildSelect.addEventListener('change', (e) => {
   loadWhitelist();
 });
 
-// Music control button listeners
-els.btnPause.addEventListener('click', () => musicControl('pause'));
-els.btnResume.addEventListener('click', () => musicControl('resume'));
-els.btnSkip.addEventListener('click', () => musicControl('skip'));
-els.btnStop.addEventListener('click', () => musicControl('stop'));
-els.btnLoop.addEventListener('click', () => musicControl('loop'));
-
-// Advanced volume control (1-10000)
-els.volumeAdvanced.addEventListener('input', (e) => {
-  const volume = parseInt(e.target.value, 10);
-  const percentage = Math.round((volume / 10000) * 100);
-  els.volValue.textContent = `${percentage}%`;
-});
-
-els.volumeAdvanced.addEventListener('change', async (e) => {
-  const volume = parseInt(e.target.value, 10);
-  try {
-    await fetch('/api/music/volume-advanced', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ volume }),
-    });
-  } catch (err) {
-    console.error('Advanced volume error:', err);
-  }
-});
-
-// Bass control (1-100)
-els.bassSlider.addEventListener('input', (e) => {
-  const bass = parseInt(e.target.value, 10);
-  els.bassValue.textContent = `${bass}%`;
-});
-
-els.bassSlider.addEventListener('change', async (e) => {
-  const bass = parseInt(e.target.value, 10);
-  try {
-    await fetch('/api/music/bass', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bass }),
-    });
-  } catch (err) {
-    console.error('Bass control error:', err);
-  }
-});
-
-// Voice Bass toggle
-els.btnVoiceBass.addEventListener('click', async () => {
-  const isEnabled = els.voiceBassStatus.textContent === 'ON';
-  const newState = !isEnabled;
-  
-  try {
-    await fetch('/api/music/voice-bass', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: newState }),
-    });
-    
-    els.voiceBassStatus.textContent = newState ? 'ON' : 'OFF';
-    els.btnVoiceBass.classList.toggle('active', newState);
-  } catch (err) {
-    console.error('Voice bass error:', err);
-  }
-});
-
-// Punk Mode toggle
-els.btnPunkMode.addEventListener('click', async () => {
-  const isEnabled = els.punkModeStatus.textContent === 'ON';
-  const newState = !isEnabled;
-  
-  try {
-    await fetch('/api/music/punk-mode', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: newState }),
-    });
-    
-    els.punkModeStatus.textContent = newState ? 'ON' : 'OFF';
-    els.btnPunkMode.classList.toggle('active', newState);
-  } catch (err) {
-    console.error('Punk mode error:', err);
-  }
-});
-
 (async function init() {
   await loadGuilds();
   await loadConfigSummary();
   await loadCommands();
   await loadServersOverview();
-  await loadAudioSettings();
-  await loadMusicStatus();
   tick();
   setInterval(tick, REFRESH_MS);
   setInterval(loadServersOverview, REFRESH_MS);
