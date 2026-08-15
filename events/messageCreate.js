@@ -22,6 +22,12 @@ module.exports = {
     if (message.author.bot || !message.guild) return;
 
     const trimmed = message.content.trim();
+
+    // Ignore regular mention pings like <@123456789> so they aren't mistaken for prefix commands.
+    if (/^<@!?(\d+)>$/.test(trimmed) || /^<@!?(\d+)>(\s|$)/.test(trimmed)) {
+      return;
+    }
+
     if (trimmed.startsWith(prefix)) {
       const input = trimmed.slice(prefix.length).trim();
       if (!input) {
