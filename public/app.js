@@ -233,6 +233,44 @@ async function loadServersOverview() {
   }
 }
 
+async function loadAudioSettings() {
+  try {
+    const settings = await fetchJSON('/api/music/audio-settings');
+
+    const volume = Number(settings.volume ?? settings.defaultVolume ?? 5000);
+    const bass = Number(settings.bass ?? 50);
+    const voiceBass = Boolean(settings.voiceBass);
+    const punkMode = Boolean(settings.punkMode);
+
+    if (els.volumeAdvanced) {
+      els.volumeAdvanced.value = String(Math.max(1, Math.min(10000, volume)));
+      const percent = Math.round((Number(els.volumeAdvanced.value) / 10000) * 100);
+      els.volValue.textContent = `${percent}%`;
+    }
+
+    if (els.bassSlider) {
+      els.bassSlider.value = String(Math.max(1, Math.min(100, bass)));
+      els.bassValue.textContent = `${els.bassSlider.value}%`;
+    }
+
+    if (els.voiceBassStatus) {
+      els.voiceBassStatus.textContent = voiceBass ? 'ON' : 'OFF';
+    }
+    if (els.btnVoiceBass) {
+      els.btnVoiceBass.classList.toggle('active', voiceBass);
+    }
+
+    if (els.punkModeStatus) {
+      els.punkModeStatus.textContent = punkMode ? 'ON' : 'OFF';
+    }
+    if (els.btnPunkMode) {
+      els.btnPunkMode.classList.toggle('active', punkMode);
+    }
+  } catch (err) {
+    console.error('Failed to load audio settings:', err);
+  }
+}
+
 async function loadMusicStatus() {
   try {
     const status = await fetchJSON('/api/music/status');
@@ -240,12 +278,14 @@ async function loadMusicStatus() {
     if (!status.track) {
       els.playerTitle.textContent = 'No track playing';
       els.playerAuthor.textContent = '—';
+      els.playerDuration.textContent = '0:00';
       els.playerThumbnail.innerHTML = '<div class="placeholder">♪</div>';
       return;
     }
 
     els.playerTitle.textContent = status.track.title;
     els.playerAuthor.textContent = status.track.author || '—';
+    els.playerDuration.textContent = formatDuration(status.track.duration || 0);
     
     if (status.track.thumbnail) {
       els.playerThumbnail.innerHTML = `<img src="${status.track.thumbnail}" alt="Track thumbnail">`;
@@ -253,7 +293,12 @@ async function loadMusicStatus() {
       els.playerThumbnail.innerHTML = '<div class="placeholder">♪</div>';
     }
 
-    els.volumeSlider.value = status.volume || 80;
+    if (els.volumeAdvanced) {
+      const volumeValue = Number(status.volume) || 50;
+      const mappedValue = Math.max(1, Math.min(10000, Math.round((volumeValue / 100) * 10000)));
+      els.volumeAdvanced.value = String(mappedValue);
+      els.volValue.textContent = `${Math.round(volumeValue)}%`;
+    }
     
     // Update loop button color based on mode
     if (status.loop === 'off') {
@@ -408,6 +453,7 @@ els.btnPunkMode.addEventListener('click', async () => {
   await loadConfigSummary();
   await loadCommands();
   await loadServersOverview();
+  await loadAudioSettings();
   await loadMusicStatus();
   tick();
   setInterval(tick, REFRESH_MS);

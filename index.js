@@ -26,6 +26,13 @@ if (missingDirs.length > 0) {
   process.exit(1);
 }
 
+const BOT_TOKEN = process.env.BOT_TOKEN;
+if (!BOT_TOKEN || BOT_TOKEN === 'paste_your_bot_token_here' || BOT_TOKEN.includes('your_bot_token')) {
+  console.error('❌ Bot is offline: BOT_TOKEN is missing or still set to the placeholder value in the .env file.');
+  console.error('   Fix: open .env and replace BOT_TOKEN=paste_your_bot_token_here with your real Discord bot token.');
+  process.exit(1);
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -71,7 +78,7 @@ process.on('unhandledRejection', (err) => {
   console.error('Unhandled promise rejection:', err);
 });
 
-client.login(process.env.BOT_TOKEN);
+client.login(BOT_TOKEN);
 
 // Initialize music player
 initMusicPlayer(client);
@@ -80,6 +87,18 @@ initMusicPlayer(client);
 const createServer = require('./api/server');
 const PORT = process.env.PORT || 3000;
 const app = createServer(client);
+app.on('error', (err) => {
+  console.error('Dashboard startup failed:', err);
+  process.exit(1);
+});
+
 app.listen(PORT, () => {
   console.log(`🌐 RED EXE dashboard listening on port ${PORT}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use. Close the existing process or set a different PORT in .env.`);
+    process.exit(1);
+  }
+  console.error('Server error:', err);
+  process.exit(1);
 });
