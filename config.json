@@ -6,6 +6,7 @@
     "info": "#5865F2"
   },
   "botAvatarGif": "./assets/avatar.gif",
+  "prefix": "<",
   "presence": {
     "rotateEveryMs": 10000,
     "statuses": [
