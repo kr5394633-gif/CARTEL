@@ -21,12 +21,20 @@ const els = {
   playerThumbnail: document.getElementById('playerThumbnail'),
   playerTitle: document.getElementById('playerTitle'),
   playerAuthor: document.getElementById('playerAuthor'),
+  playerDuration: document.getElementById('playerDuration'),
   btnPause: document.getElementById('btnPause'),
   btnResume: document.getElementById('btnResume'),
   btnSkip: document.getElementById('btnSkip'),
   btnStop: document.getElementById('btnStop'),
-  volumeSlider: document.getElementById('volumeSlider'),
   btnLoop: document.getElementById('btnLoop'),
+  volumeAdvanced: document.getElementById('volumeAdvanced'),
+  volValue: document.getElementById('volValue'),
+  bassSlider: document.getElementById('bassSlider'),
+  bassValue: document.getElementById('bassValue'),
+  btnVoiceBass: document.getElementById('btnVoiceBass'),
+  voiceBassStatus: document.getElementById('voiceBassStatus'),
+  btnPunkMode: document.getElementById('btnPunkMode'),
+  punkModeStatus: document.getElementById('punkModeStatus'),
 };
 
 let selectedGuildId = null;
@@ -318,16 +326,80 @@ els.btnSkip.addEventListener('click', () => musicControl('skip'));
 els.btnStop.addEventListener('click', () => musicControl('stop'));
 els.btnLoop.addEventListener('click', () => musicControl('loop'));
 
-els.volumeSlider.addEventListener('change', async (e) => {
+// Advanced volume control (1-10000)
+els.volumeAdvanced.addEventListener('input', (e) => {
+  const volume = parseInt(e.target.value, 10);
+  const percentage = Math.round((volume / 10000) * 100);
+  els.volValue.textContent = `${percentage}%`;
+});
+
+els.volumeAdvanced.addEventListener('change', async (e) => {
   const volume = parseInt(e.target.value, 10);
   try {
-    await fetch('/api/music/volume', {
+    await fetch('/api/music/volume-advanced', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ volume }),
     });
   } catch (err) {
-    console.error('Volume control error:', err);
+    console.error('Advanced volume error:', err);
+  }
+});
+
+// Bass control (1-100)
+els.bassSlider.addEventListener('input', (e) => {
+  const bass = parseInt(e.target.value, 10);
+  els.bassValue.textContent = `${bass}%`;
+});
+
+els.bassSlider.addEventListener('change', async (e) => {
+  const bass = parseInt(e.target.value, 10);
+  try {
+    await fetch('/api/music/bass', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bass }),
+    });
+  } catch (err) {
+    console.error('Bass control error:', err);
+  }
+});
+
+// Voice Bass toggle
+els.btnVoiceBass.addEventListener('click', async () => {
+  const isEnabled = els.voiceBassStatus.textContent === 'ON';
+  const newState = !isEnabled;
+  
+  try {
+    await fetch('/api/music/voice-bass', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: newState }),
+    });
+    
+    els.voiceBassStatus.textContent = newState ? 'ON' : 'OFF';
+    els.btnVoiceBass.classList.toggle('active', newState);
+  } catch (err) {
+    console.error('Voice bass error:', err);
+  }
+});
+
+// Punk Mode toggle
+els.btnPunkMode.addEventListener('click', async () => {
+  const isEnabled = els.punkModeStatus.textContent === 'ON';
+  const newState = !isEnabled;
+  
+  try {
+    await fetch('/api/music/punk-mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: newState }),
+    });
+    
+    els.punkModeStatus.textContent = newState ? 'ON' : 'OFF';
+    els.btnPunkMode.classList.toggle('active', newState);
+  } catch (err) {
+    console.error('Punk mode error:', err);
   }
 });
 

@@ -364,6 +364,95 @@ function createServer(client) {
     }
   });
 
+  // ========== ADVANCED AUDIO CONTROLS ==========
+  app.post('/api/music/volume-advanced', express.json(), (req, res) => {
+    try {
+      const { getMusicPlayer } = require('../utils/musicPlayer');
+      const player = getMusicPlayer();
+      const { volume } = req.body;
+
+      if (volume === undefined || volume < 1 || volume > 10000) {
+        return res.status(400).json({ error: 'Volume must be between 1 and 10000' });
+      }
+
+      const queue = player.nodes.find((q) => q.connection);
+      if (!queue) {
+        return res.status(400).json({ error: 'No voice connection found' });
+      }
+
+      // Convert 1-10000 scale to 0-100 scale for discord-player
+      const normalizedVolume = Math.max(0, Math.min(100, (volume / 10000) * 100));
+      queue.node.setVolume(normalizedVolume);
+      
+      res.json({ success: true, volume, normalized: Math.round(normalizedVolume) });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/music/bass', express.json(), (req, res) => {
+    try {
+      const { bass } = req.body;
+
+      if (bass === undefined || bass < 1 || bass > 100) {
+        return res.status(400).json({ error: 'Bass must be between 1 and 100' });
+      }
+
+      // Store bass setting globally for this session
+      if (!global.audioSettings) global.audioSettings = {};
+      global.audioSettings.bass = bass;
+
+      res.json({ success: true, bass, message: `Bass set to ${bass}%` });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/music/voice-bass', express.json(), (req, res) => {
+    try {
+      const { enabled } = req.body;
+
+      if (!global.audioSettings) global.audioSettings = {};
+      global.audioSettings.voiceBass = enabled === true;
+
+      res.json({ success: true, voiceBass: global.audioSettings.voiceBass });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/music/punk-mode', express.json(), (req, res) => {
+    try {
+      const { enabled } = req.body;
+
+      if (!global.audioSettings) global.audioSettings = {};
+      global.audioSettings.punkMode = enabled === true;
+
+      res.json({ 
+        success: true, 
+        punkMode: global.audioSettings.punkMode,
+        message: global.audioSettings.punkMode ? '🎸 PUNK MODE ACTIVATED!' : 'Punk mode disabled'
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/music/audio-settings', (req, res) => {
+    try {
+      if (!global.audioSettings) {
+        global.audioSettings = {
+          bass: parseInt(process.env.DEFAULT_BASS) || 50,
+          voiceBass: false,
+          punkMode: process.env.PUNK_MODE === 'true',
+        };
+      }
+      res.json(global.audioSettings);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return app;
 }
 
