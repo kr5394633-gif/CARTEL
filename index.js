@@ -41,8 +41,17 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildModeration, // needed for ban add/remove events
     GatewayIntentBits.GuildVoiceStates, // needed for music playback
+    GatewayIntentBits.DirectMessages, // for DM support
   ],
   partials: [Partials.Message, Partials.Channel, Partials.GuildMember],
+});
+
+// Set immediate online status (will be updated by ready event)
+client.on('ready', () => {
+  client.user.setPresence({
+    activities: [{ name: '🛡️ Server Security', type: 'Watching' }],
+    status: 'online',
+  });
 });
 
 // ---------- Load Commands ----------
