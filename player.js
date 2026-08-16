@@ -4,13 +4,14 @@ const {
   createAudioResource, 
   AudioPlayerStatus,
   entersState,
-  VoiceConnectionStatus
+  VoiceConnectionStatus,
+  StreamType
 } = require('@discordjs/voice');
 const play = require('play-dl');
 
 const queues = new Map();
 
-// Initialize SoundCloud Client ID to bypass YouTube 429 IP rate-limits
+// Initialize SoundCloud Client ID once on startup
 (async () => {
   try {
     const scClientId = await play.getFreeClientID();
@@ -20,12 +21,21 @@ const queues = new Map();
           client_id: scClientId
         }
       });
-      console.log('✅ SoundCloud streaming engine initialized');
+      console.log('✅ SoundCloud streaming engine ready');
     }
   } catch (err) {
-    console.warn('SoundCloud init warning:', err.message);
+    console.warn('SoundCloud token initialization note:', err.message);
   }
 })();
+
+async function getStreamSource(url) {
+  try {
+    return await play.stream(url);
+  } catch (e) {
+    // Fallback: try forcing discordPlayerCompatibility mode
+    return await play.stream(url, { quality: 2, discordPlayerCompatibility: true });
+  }
+}
 
 async function playNextSong(guildId) {
   const guildQueue = queues.get(guildId);
@@ -43,7 +53,7 @@ async function playNextSong(guildId) {
   guildQueue.currentSong = song;
 
   try {
-    const streamSource = await play.stream(song.url);
+    const streamSource = await getStreamSource(song.url);
 
     const resource = createAudioResource(streamSource.stream, {
       inputType: streamSource.type,
@@ -61,7 +71,7 @@ async function playNextSong(guildId) {
       guildQueue.textChannel.send(`🎵 Now playing: **${song.title}**`);
     }
   } catch (err) {
-    console.error('Playback Stream Error:', err.message);
+    console.error('Playback Stream Error on:', song.title, err);
     if (guildQueue.textChannel) {
       guildQueue.textChannel.send(`❌ Could not stream: **${song.title}** (Skipping)`);
     }
@@ -116,7 +126,7 @@ async function handleJoin(message) {
   });
 
   player.on('error', (error) => {
-    console.error('Audio Player Error:', error.message);
+    console.error('Audio Player Runtime Error:', error.message);
     guildQueue.songs.shift();
     playNextSong(message.guild.id);
   });
@@ -134,11 +144,23 @@ async function handlePlay(message, args) {
   let song = null;
 
   try {
+    // 1. Direct SoundCloud Link
     if (play.so_validate(query) === 'track') {
       const info = await play.soundcloud(query);
       song = { title: info.name, url: info.url };
-    } else {
+    } 
+    // 2. Direct YouTube Link
+    else if (play.yt_validate(query) === 'video') {
+      const info = await play.video_basic_info(query);
+      song = {
+        title: info.video_details.title,
+        url: info.video_details.url
+      };
+    }
+    // 3. Search query: Try SoundCloud first, then fallback to YouTube
+    else {
       let results = await play.search(query, { limit: 1, source: { soundcloud: 'tracks' } }).catch(() => []);
+      
       if (!results || results.length === 0) {
         results = await play.search(query, { limit: 1, source: { youtube: 'video' } }).catch(() => []);
       }
@@ -152,11 +174,11 @@ async function handlePlay(message, args) {
     }
   } catch (err) {
     console.error('Search error:', err.message);
-    return message.reply('❌ Error fetching track. Try another search query.');
+    return message.reply('❌ Error searching for the track. Try typing another title.');
   }
 
   if (!song) {
-    return message.reply('❌ No tracks found for that search.');
+    return message.reply('❌ No tracks found.');
   }
 
   let guildQueue = queues.get(message.guild.id);
@@ -200,7 +222,7 @@ async function handlePlay(message, args) {
     });
 
     player.on('error', (error) => {
-      console.error('Audio Player Error:', error.message);
+      console.error('Audio Player Runtime Error:', error.message);
       guildQueue.songs.shift();
       playNextSong(message.guild.id);
     });
