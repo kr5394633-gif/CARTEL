@@ -2,10 +2,11 @@ const {
   joinVoiceChannel, 
   createAudioPlayer, 
   createAudioResource, 
-  AudioPlayerStatus,
-  entersState,
+  AudioPlayerStatus, 
+  entersState, 
   VoiceConnectionStatus,
-  demuxProbe
+  StreamType,
+  NoSubscriberBehavior
 } = require('@discordjs/voice');
 const play = require('play-dl');
 
@@ -21,10 +22,10 @@ const queues = new Map();
           client_id: scClientId
         }
       });
-      console.log('✅ SoundCloud streaming engine ready');
+      console.log('✅ SoundCloud streaming engine verified');
     }
   } catch (err) {
-    console.warn('SoundCloud token init warning:', err.message);
+    console.warn('SoundCloud token initialization note:', err.message);
   }
 })();
 
@@ -46,11 +47,17 @@ async function playNextSong(guildId) {
   guildQueue.currentSong = song;
 
   try {
-    const streamSource = await play.stream(song.url, { quality: 2 });
-    const { stream, type } = await demuxProbe(streamSource.stream);
+    let streamInfo;
+    
+    // First try SoundCloud / Direct stream
+    try {
+      streamInfo = await play.stream(song.url, { quality: 2 });
+    } catch (e) {
+      streamInfo = await play.stream(song.url, { quality: 2, discordPlayerCompatibility: true });
+    }
 
-    const resource = createAudioResource(stream, {
-      inputType: type,
+    const resource = createAudioResource(streamInfo.stream, {
+      inputType: streamInfo.type || StreamType.Arbitrary,
       inlineVolume: true
     });
 
@@ -65,7 +72,7 @@ async function playNextSong(guildId) {
       guildQueue.textChannel.send(`🎵 Now playing: **${song.title}**`);
     }
   } catch (err) {
-    console.error('Playback Stream Error:', err.message || err);
+    console.error('Audio Stream Extraction Error:', err);
     if (guildQueue.textChannel) {
       guildQueue.textChannel.send(`❌ Could not stream: **${song.title}** (Skipping)`);
     }
@@ -95,10 +102,14 @@ async function handleJoin(message) {
     await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
   } catch (error) {
     connection.destroy();
-    return message.reply('❌ Voice connection timed out.');
+    return message.reply('❌ Failed to connect to the voice channel.');
   }
 
-  const player = createAudioPlayer();
+  const player = createAudioPlayer({
+    behaviors: {
+      noSubscriber: NoSubscriberBehavior.Play
+    }
+  });
 
   guildQueue = {
     textChannel: message.channel,
@@ -133,7 +144,7 @@ async function handlePlay(message, args) {
   if (!voiceChannel) return message.reply('❌ Join a voice channel first!');
 
   const query = args.join(' ');
-  if (!query) return message.reply('⚠️ Please provide a song name!');
+  if (!query) return message.reply('⚠️ Please provide a song name or track link!');
 
   let song = null;
 
@@ -142,9 +153,10 @@ async function handlePlay(message, args) {
       const info = await play.soundcloud(query);
       song = { title: info.name, url: info.url };
     } else {
-      // Search SoundCloud first (100% cloud-compatible without IP blocks)
+      // Primary: Search SoundCloud (prevents YouTube 429 Data Center blocking)
       let results = await play.search(query, { limit: 1, source: { soundcloud: 'tracks' } }).catch(() => []);
       
+      // Secondary: Fallback to YouTube if no SoundCloud track is found
       if (!results || results.length === 0) {
         results = await play.search(query, { limit: 1, source: { youtube: 'video' } }).catch(() => []);
       }
@@ -157,12 +169,12 @@ async function handlePlay(message, args) {
       }
     }
   } catch (err) {
-    console.error('Search error:', err.message || err);
-    return message.reply('❌ Error fetching track. Try another search query.');
+    console.error('Search error:', err.message);
+    return message.reply('❌ Error fetching track. Try another song title.');
   }
 
   if (!song) {
-    return message.reply('❌ No tracks found for that search.');
+    return message.reply('❌ No tracks found for that search query.');
   }
 
   let guildQueue = queues.get(message.guild.id);
@@ -183,7 +195,11 @@ async function handlePlay(message, args) {
       return message.reply('❌ Voice connection timed out.');
     }
 
-    const player = createAudioPlayer();
+    const player = createAudioPlayer({
+      behaviors: {
+        noSubscriber: NoSubscriberBehavior.Play
+      }
+    });
 
     guildQueue = {
       textChannel: message.channel,
