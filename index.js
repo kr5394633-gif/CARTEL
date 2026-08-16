@@ -15,7 +15,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- Discord Client Initialization ----------
 const client = new Client({
-  intents: Object.keys(GatewayIntentBits).map((a) => GatewayIntentBits[a]),
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMembers
+  ],
   partials: [Partials.Message, Partials.Channel, Partials.GuildMember],
 });
 
@@ -35,7 +41,7 @@ app.get('/api/stats', (req, res) => {
 
   const commandsList = [
     { name: '!join', desc: 'Join user voice channel' },
-    { name: '!play <song>', desc: 'Stream YouTube audio directly' },
+    { name: '!play <song>', desc: 'Stream audio directly into voice channel' },
     { name: '!skip', desc: 'Skip current audio track' },
     { name: '!stop', desc: 'Stop playback and disconnect' }
   ];

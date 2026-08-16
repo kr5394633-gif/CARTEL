@@ -10,6 +10,23 @@ const play = require('play-dl');
 
 const queues = new Map();
 
+// Initialize SoundCloud Client ID to bypass YouTube 429 IP rate-limits
+(async () => {
+  try {
+    const scClientId = await play.getFreeClientID();
+    if (scClientId) {
+      await play.setToken({
+        soundcloud: {
+          client_id: scClientId
+        }
+      });
+      console.log('✅ SoundCloud streaming engine initialized');
+    }
+  } catch (err) {
+    console.warn('SoundCloud init warning:', err.message);
+  }
+})();
+
 async function playNextSong(guildId) {
   const guildQueue = queues.get(guildId);
   if (!guildQueue) return;
@@ -26,13 +43,10 @@ async function playNextSong(guildId) {
   guildQueue.currentSong = song;
 
   try {
-    const streamInfo = await play.stream(song.url, {
-      quality: 2,
-      discordPlayerCompatibility: true
-    });
+    const streamSource = await play.stream(song.url);
 
-    const resource = createAudioResource(streamInfo.stream, {
-      inputType: streamInfo.type,
+    const resource = createAudioResource(streamSource.stream, {
+      inputType: streamSource.type,
       inlineVolume: true
     });
 
@@ -47,9 +61,9 @@ async function playNextSong(guildId) {
       guildQueue.textChannel.send(`🎵 Now playing: **${song.title}**`);
     }
   } catch (err) {
-    console.error('Audio Stream Extraction Error:', err.message);
+    console.error('Playback Stream Error:', err.message);
     if (guildQueue.textChannel) {
-      guildQueue.textChannel.send(`❌ Streaming error on: **${song.title}** (Skipping to next)`);
+      guildQueue.textChannel.send(`❌ Could not stream: **${song.title}** (Skipping)`);
     }
     guildQueue.songs.shift();
     playNextSong(guildId);
@@ -77,7 +91,7 @@ async function handleJoin(message) {
     await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
   } catch (error) {
     connection.destroy();
-    return message.reply('❌ Failed to establish connection to the voice channel.');
+    return message.reply('❌ Voice connection timed out.');
   }
 
   const player = createAudioPlayer();
@@ -102,7 +116,7 @@ async function handleJoin(message) {
   });
 
   player.on('error', (error) => {
-    console.error('Audio Player Runtime Error:', error.message);
+    console.error('Audio Player Error:', error.message);
     guildQueue.songs.shift();
     playNextSong(message.guild.id);
   });
@@ -120,34 +134,29 @@ async function handlePlay(message, args) {
   let song = null;
 
   try {
-    // 1. Check if user passed direct SoundCloud URL
     if (play.so_validate(query) === 'track') {
       const info = await play.soundcloud(query);
       song = { title: info.name, url: info.url };
-    } 
-    // 2. Search via SoundCloud first to completely prevent YouTube 429 blocks on Railway
-    else {
-      let searchResults = await play.search(query, { limit: 1, source: { soundcloud: 'tracks' } }).catch(() => []);
-      
-      // Fallback search to youtube if soundcloud returns empty
-      if (!searchResults || searchResults.length === 0) {
-        searchResults = await play.search(query, { limit: 1, source: { youtube: 'video' } }).catch(() => []);
+    } else {
+      let results = await play.search(query, { limit: 1, source: { soundcloud: 'tracks' } }).catch(() => []);
+      if (!results || results.length === 0) {
+        results = await play.search(query, { limit: 1, source: { youtube: 'video' } }).catch(() => []);
       }
 
-      if (searchResults && searchResults.length > 0) {
+      if (results && results.length > 0) {
         song = {
-          title: searchResults[0].title || searchResults[0].name,
-          url: searchResults[0].url
+          title: results[0].title || results[0].name,
+          url: results[0].url
         };
       }
     }
   } catch (err) {
     console.error('Search error:', err.message);
-    return message.reply('❌ Error fetching track. Try typing another song name.');
+    return message.reply('❌ Error fetching track. Try another search query.');
   }
 
   if (!song) {
-    return message.reply('❌ No track found for that search.');
+    return message.reply('❌ No tracks found for that search.');
   }
 
   let guildQueue = queues.get(message.guild.id);
@@ -191,7 +200,7 @@ async function handlePlay(message, args) {
     });
 
     player.on('error', (error) => {
-      console.error('Audio Player Runtime Error:', error.message);
+      console.error('Audio Player Error:', error.message);
       guildQueue.songs.shift();
       playNextSong(message.guild.id);
     });
