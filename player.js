@@ -4,12 +4,9 @@ const {
   createAudioResource, 
   AudioPlayerStatus,
   entersState,
-  VoiceConnectionStatus,
-  StreamType
+  VoiceConnectionStatus
 } = require('@discordjs/voice');
 const play = require('play-dl');
-const prism = require('prism-media');
-const ffmpeg = require('ffmpeg-static');
 
 const queues = new Map();
 
@@ -29,29 +26,13 @@ async function playNextSong(guildId) {
   guildQueue.currentSong = song;
 
   try {
-    const streamInfo = await play.stream(song.url, { 
-      quality: 2, 
-      discordPlayerCompatibility: true 
+    const streamInfo = await play.stream(song.url, {
+      quality: 2,
+      discordPlayerCompatibility: true
     });
 
-    const ffmpegProcess = new prism.FFmpeg({
-      shell: false,
-      command: ffmpeg,
-      args: [
-        '-reconnect', '1',
-        '-reconnect_streamed', '1',
-        '-reconnect_delay_max', '5',
-        '-i', streamInfo.url,
-        '-analyzeduration', '0',
-        '-loglevel', '0',
-        '-f', 's16le',
-        '-ar', '48000',
-        '-ac', '2',
-      ],
-    });
-
-    const resource = createAudioResource(ffmpegProcess, {
-      inputType: StreamType.Raw,
+    const resource = createAudioResource(streamInfo.stream, {
+      inputType: streamInfo.type,
       inlineVolume: true
     });
 
@@ -66,9 +47,9 @@ async function playNextSong(guildId) {
       guildQueue.textChannel.send(`🎵 Now playing: **${song.title}**`);
     }
   } catch (err) {
-    console.error('Audio Stream Extraction Error:', err);
+    console.error('Audio Stream Extraction Error:', err.message);
     if (guildQueue.textChannel) {
-      guildQueue.textChannel.send(`❌ Playback stream error on: **${song.title}**`);
+      guildQueue.textChannel.send(`❌ Streaming error on: **${song.title}** (Skipping to next)`);
     }
     guildQueue.songs.shift();
     playNextSong(guildId);
@@ -134,33 +115,39 @@ async function handlePlay(message, args) {
   if (!voiceChannel) return message.reply('❌ Join a voice channel first!');
 
   const query = args.join(' ');
-  if (!query) return message.reply('⚠️ Please provide a song name or URL!');
+  if (!query) return message.reply('⚠️ Please provide a song name or track link!');
 
   let song = null;
 
   try {
-    if (play.yt_validate(query) === 'video') {
-      const info = await play.video_basic_info(query);
-      song = {
-        title: info.video_details.title,
-        url: info.video_details.url
-      };
-    } else {
-      const searchResults = await play.search(query, { limit: 1, source: { youtube: 'video' } });
+    // 1. Check if user passed direct SoundCloud URL
+    if (play.so_validate(query) === 'track') {
+      const info = await play.soundcloud(query);
+      song = { title: info.name, url: info.url };
+    } 
+    // 2. Search via SoundCloud first to completely prevent YouTube 429 blocks on Railway
+    else {
+      let searchResults = await play.search(query, { limit: 1, source: { soundcloud: 'tracks' } }).catch(() => []);
+      
+      // Fallback search to youtube if soundcloud returns empty
+      if (!searchResults || searchResults.length === 0) {
+        searchResults = await play.search(query, { limit: 1, source: { youtube: 'video' } }).catch(() => []);
+      }
+
       if (searchResults && searchResults.length > 0) {
         song = {
-          title: searchResults[0].title,
+          title: searchResults[0].title || searchResults[0].name,
           url: searchResults[0].url
         };
       }
     }
   } catch (err) {
-    console.error('Search error:', err);
-    return message.reply('❌ Could not find track information.');
+    console.error('Search error:', err.message);
+    return message.reply('❌ Error fetching track. Try typing another song name.');
   }
 
   if (!song) {
-    return message.reply('❌ No results found.');
+    return message.reply('❌ No track found for that search.');
   }
 
   let guildQueue = queues.get(message.guild.id);
