@@ -5,7 +5,7 @@ const {
   AudioPlayerStatus,
   entersState,
   VoiceConnectionStatus,
-  StreamType
+  demuxProbe
 } = require('@discordjs/voice');
 const play = require('play-dl');
 
@@ -24,7 +24,7 @@ const queues = new Map();
       console.log('✅ SoundCloud streaming engine ready');
     }
   } catch (err) {
-    console.warn('SoundCloud init warning:', err.message);
+    console.warn('SoundCloud token init warning:', err.message);
   }
 })();
 
@@ -46,15 +46,11 @@ async function playNextSong(guildId) {
   guildQueue.currentSong = song;
 
   try {
-    let streamSource;
-    try {
-      streamSource = await play.stream(song.url);
-    } catch (streamErr) {
-      streamSource = await play.stream(song.url, { quality: 2, discordPlayerCompatibility: true });
-    }
+    const streamSource = await play.stream(song.url, { quality: 2 });
+    const { stream, type } = await demuxProbe(streamSource.stream);
 
-    const resource = createAudioResource(streamSource.stream, {
-      inputType: streamSource.type,
+    const resource = createAudioResource(stream, {
+      inputType: type,
       inlineVolume: true
     });
 
@@ -69,9 +65,9 @@ async function playNextSong(guildId) {
       guildQueue.textChannel.send(`🎵 Now playing: **${song.title}**`);
     }
   } catch (err) {
-    console.error('Audio Stream Extraction Error:', err.message || err);
+    console.error('Playback Stream Error:', err.message || err);
     if (guildQueue.textChannel) {
-      guildQueue.textChannel.send(`❌ Playback stream error on: **${song.title}** (Skipping)`);
+      guildQueue.textChannel.send(`❌ Could not stream: **${song.title}** (Skipping)`);
     }
     guildQueue.songs.shift();
     playNextSong(guildId);
@@ -137,7 +133,7 @@ async function handlePlay(message, args) {
   if (!voiceChannel) return message.reply('❌ Join a voice channel first!');
 
   const query = args.join(' ');
-  if (!query) return message.reply('⚠️ Please provide a song name or track link!');
+  if (!query) return message.reply('⚠️ Please provide a song name!');
 
   let song = null;
 
@@ -145,14 +141,10 @@ async function handlePlay(message, args) {
     if (play.so_validate(query) === 'track') {
       const info = await play.soundcloud(query);
       song = { title: info.name, url: info.url };
-    } else if (play.yt_validate(query) === 'video') {
-      const info = await play.video_basic_info(query);
-      song = {
-        title: info.video_details.title,
-        url: info.video_details.url
-      };
     } else {
+      // Search SoundCloud first (100% cloud-compatible without IP blocks)
       let results = await play.search(query, { limit: 1, source: { soundcloud: 'tracks' } }).catch(() => []);
+      
       if (!results || results.length === 0) {
         results = await play.search(query, { limit: 1, source: { youtube: 'video' } }).catch(() => []);
       }
@@ -166,7 +158,7 @@ async function handlePlay(message, args) {
     }
   } catch (err) {
     console.error('Search error:', err.message || err);
-    return message.reply('❌ Error fetching track. Try another title.');
+    return message.reply('❌ Error fetching track. Try another search query.');
   }
 
   if (!song) {
