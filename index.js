@@ -4,7 +4,15 @@ const path = require('path');
 const express = require('express');
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { connectToDatabase } = require('./mongodb');
-const { handleJoin, handlePlay, handleSkip, handleStop, setWebVolume, getMusicStatus, queues } = require('./player');
+const { 
+  initializePlayer, 
+  handleJoin, 
+  handlePlay, 
+  handleSkip, 
+  handleStop, 
+  setWebVolume, 
+  getMusicStatus 
+} = require('./player');
 
 // ---------- Express Dashboard Web Server ----------
 const app = express();
@@ -41,7 +49,7 @@ app.get('/api/stats', (req, res) => {
 
   const commandsList = [
     { name: '!join', desc: 'Join user voice channel' },
-    { name: '!play <song>', desc: 'Stream audio directly into voice channel' },
+    { name: '!play <song>', desc: 'Play any song directly in voice' },
     { name: '!skip', desc: 'Skip current audio track' },
     { name: '!stop', desc: 'Stop playback and disconnect' }
   ];
@@ -79,18 +87,13 @@ app.post('/api/music/volume', (req, res) => {
 app.post('/api/music/control', (req, res) => {
   const { action, guildId } = req.body;
   const targetGuild = guildId || client.guilds.cache.first()?.id;
-  const q = queues.get(targetGuild);
-
-  if (!q) return res.status(400).json({ error: 'No active player' });
+  if (!targetGuild) return res.status(400).json({ error: 'No active server' });
 
   if (action === 'skip') {
-    q.player.stop();
+    handleSkip({ guild: { id: targetGuild }, reply: () => {} });
     return res.json({ success: true, action: 'skipped' });
   } else if (action === 'stop') {
-    q.songs = [];
-    q.player.stop();
-    q.connection.destroy();
-    queues.delete(targetGuild);
+    handleStop({ guild: { id: targetGuild }, reply: () => {} });
     return res.json({ success: true, action: 'stopped' });
   }
 
@@ -105,7 +108,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Dashboard listening on port ${PORT}`);
 });
 
-// ---------- Load Commands ----------
+// ---------- Load Discord Commands ----------
 const commandsPath = path.join(__dirname, 'commands');
 if (fs.existsSync(commandsPath)) {
   const commandFolders = fs.readdirSync(commandsPath);
@@ -121,7 +124,7 @@ if (fs.existsSync(commandsPath)) {
   }
 }
 
-// ---------- Discord Commands Handler ----------
+// ---------- Discord Command Handler ----------
 client.on('messageCreate', async (message) => {
   if (message.author.bot || !message.guild) return;
 
@@ -142,5 +145,10 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-connectToDatabase().catch((err) => console.error('Database error:', err));
+client.once('ready', async () => {
+  console.log(`🤖 Logged in as ${client.user.tag}`);
+  await initializePlayer(client);
+});
+
+connectToDatabase().catch((err) => console.error('Database connection error:', err));
 client.login(process.env.BOT_TOKEN);

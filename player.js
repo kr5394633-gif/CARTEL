@@ -1,287 +1,148 @@
-const { 
-  joinVoiceChannel, 
-  createAudioPlayer, 
-  createAudioResource, 
-  AudioPlayerStatus, 
-  entersState, 
-  VoiceConnectionStatus,
-  StreamType,
-  NoSubscriberBehavior
-} = require('@discordjs/voice');
-const play = require('play-dl');
+const { Player } = require('discord-player');
+const { DefaultExtractors } = require('@discord-player/extractor');
 
-const queues = new Map();
+let playerInstance = null;
 
-// Initialize SoundCloud Client ID once on startup
-(async () => {
-  try {
-    const scClientId = await play.getFreeClientID();
-    if (scClientId) {
-      await play.setToken({
-        soundcloud: {
-          client_id: scClientId
-        }
-      });
-      console.log('✅ SoundCloud streaming engine verified');
+async function initializePlayer(client) {
+  if (playerInstance) return playerInstance;
+
+  playerInstance = new Player(client, {
+    ytdlOptions: {
+      quality: 'highestaudio',
+      highWaterMark: 1 << 25
     }
-  } catch (err) {
-    console.warn('SoundCloud token initialization note:', err.message);
-  }
-})();
+  });
 
-async function playNextSong(guildId) {
-  const guildQueue = queues.get(guildId);
-  if (!guildQueue) return;
+  // Automatically load stream extractors (SoundCloud, Spotify, Apple, YouTube)
+  await playerInstance.extractors.loadMulti(DefaultExtractors);
 
-  if (guildQueue.songs.length === 0) {
-    guildQueue.currentResource = null;
-    guildQueue.currentSong = null;
-    if (guildQueue.connection) {
-      guildQueue.connection.destroy();
+  playerInstance.events.on('playerStart', (queue, track) => {
+    if (queue.metadata?.channel) {
+      queue.metadata.channel.send(`🎵 Now playing: **${track.title}** (${track.duration})`);
     }
-    queues.delete(guildId);
-    return;
-  }
+  });
 
-  const song = guildQueue.songs[0];
-  guildQueue.currentSong = song;
+  playerInstance.events.on('error', (queue, error) => {
+    console.error(`[Player Error] ${error.message}`);
+  });
 
-  try {
-    let streamInfo;
-    
-    // First try SoundCloud / Direct stream
-    try {
-      streamInfo = await play.stream(song.url, { quality: 2 });
-    } catch (e) {
-      streamInfo = await play.stream(song.url, { quality: 2, discordPlayerCompatibility: true });
-    }
+  playerInstance.events.on('playerError', (queue, error) => {
+    console.error(`[Audio Connection Error] ${error.message}`);
+  });
 
-    const resource = createAudioResource(streamInfo.stream, {
-      inputType: streamInfo.type || StreamType.Arbitrary,
-      inlineVolume: true
-    });
-
-    if (resource.volume) {
-      resource.volume.setVolume(guildQueue.volume / 100);
-    }
-
-    guildQueue.currentResource = resource;
-    guildQueue.player.play(resource);
-
-    if (guildQueue.textChannel) {
-      guildQueue.textChannel.send(`🎵 Now playing: **${song.title}**`);
-    }
-  } catch (err) {
-    console.error('Audio Stream Extraction Error:', err);
-    if (guildQueue.textChannel) {
-      guildQueue.textChannel.send(`❌ Could not stream: **${song.title}** (Skipping)`);
-    }
-    guildQueue.songs.shift();
-    playNextSong(guildId);
-  }
+  console.log('✅ Discord Player engine initialized successfully');
+  return playerInstance;
 }
 
 async function handleJoin(message) {
-  const voiceChannel = message.member.voice.channel;
+  const voiceChannel = message.member?.voice?.channel;
   if (!voiceChannel) return message.reply('❌ You need to be in a voice channel first!');
 
-  let guildQueue = queues.get(message.guild.id);
-  if (guildQueue && guildQueue.voiceChannel.id === voiceChannel.id) {
-    return message.reply('🔊 Already connected to your voice channel!');
-  }
-
-  const connection = joinVoiceChannel({
-    channelId: voiceChannel.id,
-    guildId: message.guild.id,
-    adapterCreator: message.guild.voiceAdapterCreator,
-    selfDeaf: true,
-    selfMute: false
+  const player = playerInstance || (await initializePlayer(message.client));
+  const queue = player.nodes.create(message.guild, {
+    metadata: { channel: message.channel },
+    volume: 50,
+    leaveOnEmpty: true,
+    leaveOnEmptyCooldown: 300000,
+    leaveOnEnd: false
   });
 
   try {
-    await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
-  } catch (error) {
-    connection.destroy();
-    return message.reply('❌ Failed to connect to the voice channel.');
+    if (!queue.connection) await queue.connect(voiceChannel);
+    message.reply(` Joined **${voiceChannel.name}**!`);
+  } catch (e) {
+    queue.delete();
+    message.reply('❌ Could not join your voice channel.');
   }
-
-  const player = createAudioPlayer({
-    behaviors: {
-      noSubscriber: NoSubscriberBehavior.Play
-    }
-  });
-
-  guildQueue = {
-    textChannel: message.channel,
-    voiceChannel: voiceChannel,
-    connection: connection,
-    player: player,
-    songs: [],
-    volume: 50,
-    currentResource: null,
-    currentSong: null
-  };
-
-  queues.set(message.guild.id, guildQueue);
-  connection.subscribe(player);
-
-  player.on(AudioPlayerStatus.Idle, () => {
-    guildQueue.songs.shift();
-    playNextSong(message.guild.id);
-  });
-
-  player.on('error', (error) => {
-    console.error('Audio Player Runtime Error:', error.message);
-    guildQueue.songs.shift();
-    playNextSong(message.guild.id);
-  });
-
-  message.reply(` Joined **${voiceChannel.name}**!`);
 }
 
 async function handlePlay(message, args) {
-  const voiceChannel = message.member.voice.channel;
+  const voiceChannel = message.member?.voice?.channel;
   if (!voiceChannel) return message.reply('❌ Join a voice channel first!');
 
   const query = args.join(' ');
-  if (!query) return message.reply('⚠️ Please provide a song name or track link!');
+  if (!query) return message.reply('⚠️ Please provide a song name or link!');
 
-  let song = null;
+  const player = playerInstance || (await initializePlayer(message.client));
 
   try {
-    if (play.so_validate(query) === 'track') {
-      const info = await play.soundcloud(query);
-      song = { title: info.name, url: info.url };
-    } else {
-      // Primary: Search SoundCloud (prevents YouTube 429 Data Center blocking)
-      let results = await play.search(query, { limit: 1, source: { soundcloud: 'tracks' } }).catch(() => []);
-      
-      // Secondary: Fallback to YouTube if no SoundCloud track is found
-      if (!results || results.length === 0) {
-        results = await play.search(query, { limit: 1, source: { youtube: 'video' } }).catch(() => []);
-      }
-
-      if (results && results.length > 0) {
-        song = {
-          title: results[0].title || results[0].name,
-          url: results[0].url
-        };
-      }
-    }
-  } catch (err) {
-    console.error('Search error:', err.message);
-    return message.reply('❌ Error fetching track. Try another song title.');
-  }
-
-  if (!song) {
-    return message.reply('❌ No tracks found for that search query.');
-  }
-
-  let guildQueue = queues.get(message.guild.id);
-
-  if (!guildQueue) {
-    const connection = joinVoiceChannel({
-      channelId: voiceChannel.id,
-      guildId: message.guild.id,
-      adapterCreator: message.guild.voiceAdapterCreator,
-      selfDeaf: true,
-      selfMute: false
+    const searchResult = await player.search(query, {
+      requestedBy: message.author
     });
 
-    try {
-      await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
-    } catch (error) {
-      connection.destroy();
-      return message.reply('❌ Voice connection timed out.');
+    if (!searchResult || !searchResult.tracks.length) {
+      return message.reply('❌ No results found for that search.');
     }
 
-    const player = createAudioPlayer({
-      behaviors: {
-        noSubscriber: NoSubscriberBehavior.Play
+    const { track } = await player.play(voiceChannel, searchResult, {
+      nodeOptions: {
+        metadata: { channel: message.channel },
+        volume: 50,
+        leaveOnEmpty: true,
+        leaveOnEmptyCooldown: 300000,
+        leaveOnEnd: false
       }
     });
 
-    guildQueue = {
-      textChannel: message.channel,
-      voiceChannel: voiceChannel,
-      connection: connection,
-      player: player,
-      songs: [],
-      volume: 50,
-      currentResource: null,
-      currentSong: null
-    };
-
-    queues.set(message.guild.id, guildQueue);
-    guildQueue.songs.push(song);
-    connection.subscribe(player);
-
-    player.on(AudioPlayerStatus.Idle, () => {
-      guildQueue.songs.shift();
-      playNextSong(message.guild.id);
-    });
-
-    player.on('error', (error) => {
-      console.error('Audio Player Runtime Error:', error.message);
-      guildQueue.songs.shift();
-      playNextSong(message.guild.id);
-    });
-
-    playNextSong(message.guild.id);
-  } else {
-    guildQueue.songs.push(song);
-    return message.reply(` Added to queue: **${song.title}**`);
+    return message.reply(` Added to queue: **${track.title}**`);
+  } catch (error) {
+    console.error('Play command error:', error);
+    return message.reply(`❌ Playback error: ${error.message}`);
   }
 }
 
 function handleSkip(message) {
-  const guildQueue = queues.get(message.guild.id);
-  if (!guildQueue || guildQueue.songs.length === 0) return message.reply('❌ No songs currently playing.');
-  guildQueue.player.stop();
-  message.reply('⏭️ Skipped track.');
+  if (!playerInstance) return message.reply?.('❌ Nothing is playing.');
+  const queue = playerInstance.nodes.get(message.guild.id);
+  if (!queue || !queue.isPlaying()) return message.reply?.('❌ No song currently playing.');
+
+  queue.node.skip();
+  message.reply?.('⏭️ Skipped current track.');
 }
 
 function handleStop(message) {
-  const guildQueue = queues.get(message.guild.id);
-  if (!guildQueue) return message.reply('❌ Nothing is playing.');
-  guildQueue.songs = [];
-  guildQueue.player.stop();
-  if (guildQueue.connection) {
-    guildQueue.connection.destroy();
-  }
-  queues.delete(message.guild.id);
-  message.reply(' Stopped and disconnected.');
+  if (!playerInstance) return message.reply?.('❌ Nothing is playing.');
+  const queue = playerInstance.nodes.get(message.guild.id);
+  if (!queue) return message.reply?.('❌ Nothing is playing.');
+
+  queue.delete();
+  message.reply?.(' Stopped and disconnected.');
 }
 
 function setWebVolume(guildId, volumeLevel) {
-  const guildQueue = queues.get(guildId);
-  if (!guildQueue) return false;
-  guildQueue.volume = Math.max(0, Math.min(100, volumeLevel));
-  if (guildQueue.currentResource && guildQueue.currentResource.volume) {
-    guildQueue.currentResource.volume.setVolume(guildQueue.volume / 100);
-  }
+  if (!playerInstance) return false;
+  const queue = playerInstance.nodes.get(guildId);
+  if (!queue) return false;
+  queue.node.setVolume(Math.max(0, Math.min(100, volumeLevel)));
   return true;
 }
 
 function getMusicStatus(guildId) {
-  const guildQueue = queues.get(guildId);
-  if (!guildQueue || !guildQueue.currentSong) {
+  if (!playerInstance) {
+    return { active: false, currentSong: null, volume: 50, queueCount: 0 };
+  }
+  const queue = playerInstance.nodes.get(guildId);
+  if (!queue || !queue.currentTrack) {
     return { active: false, currentSong: null, volume: 50, queueCount: 0 };
   }
   return {
-    active: true,
-    currentSong: guildQueue.currentSong,
-    volume: guildQueue.volume,
-    queueCount: guildQueue.songs.length
+    active: queue.isPlaying(),
+    currentSong: {
+      title: queue.currentTrack.title,
+      url: queue.currentTrack.url,
+      author: queue.currentTrack.author
+    },
+    volume: queue.node.volume,
+    queueCount: queue.tracks.size
   };
 }
 
 module.exports = {
+  initializePlayer,
   handleJoin,
   handlePlay,
   handleSkip,
   handleStop,
   setWebVolume,
-  getMusicStatus,
-  queues
+  getMusicStatus
 };
