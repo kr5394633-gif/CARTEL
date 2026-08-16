@@ -7,10 +7,26 @@ const {
   VoiceConnectionStatus,
   StreamType
 } = require('@discordjs/voice');
-const ytstream = require('yt-stream');
 const play = require('play-dl');
 
 const queues = new Map();
+
+// Initialize SoundCloud Client ID once on startup
+(async () => {
+  try {
+    const scClientId = await play.getFreeClientID();
+    if (scClientId) {
+      await play.setToken({
+        soundcloud: {
+          client_id: scClientId
+        }
+      });
+      console.log('✅ SoundCloud streaming engine ready');
+    }
+  } catch (err) {
+    console.warn('SoundCloud init warning:', err.message);
+  }
+})();
 
 async function playNextSong(guildId) {
   const guildQueue = queues.get(guildId);
@@ -30,15 +46,15 @@ async function playNextSong(guildId) {
   guildQueue.currentSong = song;
 
   try {
-    // Extract stream using yt-stream with high-quality audio fallback
-    const stream = await ytstream.stream(song.url, {
-      quality: 'high',
-      type: 'audio',
-      highWaterMark: 1048576 * 32
-    });
+    let streamSource;
+    try {
+      streamSource = await play.stream(song.url);
+    } catch (streamErr) {
+      streamSource = await play.stream(song.url, { quality: 2, discordPlayerCompatibility: true });
+    }
 
-    const resource = createAudioResource(stream.stream, {
-      inputType: StreamType.Arbitrary,
+    const resource = createAudioResource(streamSource.stream, {
+      inputType: streamSource.type,
       inlineVolume: true
     });
 
@@ -121,44 +137,40 @@ async function handlePlay(message, args) {
   if (!voiceChannel) return message.reply('❌ Join a voice channel first!');
 
   const query = args.join(' ');
-  if (!query) return message.reply('⚠️ Please provide a song name or link!');
+  if (!query) return message.reply('⚠️ Please provide a song name or track link!');
 
   let song = null;
 
   try {
-    if (query.startsWith('http://') || query.startsWith('https://')) {
-      const getInfo = await ytstream.getInfo(query);
+    if (play.so_validate(query) === 'track') {
+      const info = await play.soundcloud(query);
+      song = { title: info.name, url: info.url };
+    } else if (play.yt_validate(query) === 'video') {
+      const info = await play.video_basic_info(query);
       song = {
-        title: getInfo.title,
-        url: query
+        title: info.video_details.title,
+        url: info.video_details.url
       };
     } else {
-      const results = await ytstream.search(query);
+      let results = await play.search(query, { limit: 1, source: { soundcloud: 'tracks' } }).catch(() => []);
+      if (!results || results.length === 0) {
+        results = await play.search(query, { limit: 1, source: { youtube: 'video' } }).catch(() => []);
+      }
+
       if (results && results.length > 0) {
         song = {
-          title: results[0].title,
+          title: results[0].title || results[0].name,
           url: results[0].url
         };
       }
     }
   } catch (err) {
     console.error('Search error:', err.message || err);
-    // Secondary fallback search if ytstream search encounters an error
-    try {
-      const playResults = await play.search(query, { limit: 1 });
-      if (playResults && playResults.length > 0) {
-        song = {
-          title: playResults[0].title,
-          url: playResults[0].url
-        };
-      }
-    } catch (e) {
-      console.error('Fallback search error:', e.message || e);
-    }
+    return message.reply('❌ Error fetching track. Try another title.');
   }
 
   if (!song) {
-    return message.reply('❌ Could not find the song. Try searching with a different name.');
+    return message.reply('❌ No tracks found for that search.');
   }
 
   let guildQueue = queues.get(message.guild.id);
