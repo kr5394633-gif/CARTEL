@@ -2,7 +2,8 @@ const {
   joinVoiceChannel, 
   createAudioPlayer, 
   createAudioResource, 
-  AudioPlayerStatus 
+  AudioPlayerStatus,
+  StreamType
 } = require('@discordjs/voice');
 const play = require('play-dl');
 
@@ -24,13 +25,17 @@ async function playNextSong(guildId) {
   guildQueue.currentSong = song;
 
   try {
-    const stream = await play.stream(song.url);
+    const stream = await play.stream(song.url, { quality: 2, discordPlayerCompatibility: true });
+    
     const resource = createAudioResource(stream.stream, {
       inputType: stream.type,
       inlineVolume: true
     });
 
-    resource.volume.setVolume(guildQueue.volume / 100);
+    if (resource.volume) {
+      resource.volume.setVolume(guildQueue.volume / 100);
+    }
+
     guildQueue.currentResource = resource;
     guildQueue.player.play(resource);
 
@@ -38,9 +43,9 @@ async function playNextSong(guildId) {
       guildQueue.textChannel.send(`🎵 Now playing: **${song.title}**`);
     }
   } catch (err) {
-    console.error('Audio Stream Error:', err);
+    console.error('Audio Stream Extraction Error:', err);
     if (guildQueue.textChannel) {
-      guildQueue.textChannel.send(`❌ Failed to play: **${song.title}**`);
+      guildQueue.textChannel.send(`❌ Playback stream error on: **${song.title}**`);
     }
     guildQueue.songs.shift();
     playNextSong(guildId);
@@ -61,7 +66,8 @@ function handleJoin(message) {
     channelId: voiceChannel.id,
     guildId: message.guild.id,
     adapterCreator: message.guild.voiceAdapterCreator,
-    selfDeaf: true
+    selfDeaf: true,
+    selfMute: false
   });
 
   guildQueue = {
@@ -84,7 +90,7 @@ function handleJoin(message) {
   });
 
   player.on('error', (error) => {
-    console.error('Audio Player Error:', error.message);
+    console.error('Audio Player Runtime Error:', error.message);
     guildQueue.songs.shift();
     playNextSong(message.guild.id);
   });
@@ -97,19 +103,19 @@ async function handlePlay(message, args) {
   if (!voiceChannel) return message.reply('❌ Join a voice channel first!');
 
   const query = args.join(' ');
-  if (!query) return message.reply('⚠️ Please provide a song name or YouTube URL!');
+  if (!query) return message.reply('⚠️ Please provide a song name or URL!');
 
   let song = null;
 
   try {
-    if (query.startsWith('http://') || query.startsWith('https://')) {
+    if (play.yt_validate(query) === 'video') {
       const info = await play.video_basic_info(query);
       song = {
         title: info.video_details.title,
         url: info.video_details.url
       };
     } else {
-      const searchResults = await play.search(query, { limit: 1 });
+      const searchResults = await play.search(query, { limit: 1, source: { youtube: 'video' } });
       if (searchResults && searchResults.length > 0) {
         song = {
           title: searchResults[0].title,
@@ -119,7 +125,7 @@ async function handlePlay(message, args) {
     }
   } catch (err) {
     console.error('Search error:', err);
-    return message.reply('❌ Could not find the song. Try searching by name.');
+    return message.reply('❌ Could not find track information.');
   }
 
   if (!song) {
@@ -134,7 +140,8 @@ async function handlePlay(message, args) {
       channelId: voiceChannel.id,
       guildId: message.guild.id,
       adapterCreator: message.guild.voiceAdapterCreator,
-      selfDeaf: true
+      selfDeaf: true,
+      selfMute: false
     });
 
     guildQueue = {
@@ -158,7 +165,7 @@ async function handlePlay(message, args) {
     });
 
     player.on('error', (error) => {
-      console.error('Audio Player Error:', error.message);
+      console.error('Audio Player Runtime Error:', error.message);
       guildQueue.songs.shift();
       playNextSong(message.guild.id);
     });
