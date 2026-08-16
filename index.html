@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Guardian & PrimeMusic Dashboard</title>
+  <title>Prime Guardian Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -27,12 +27,7 @@
       --sidebar-width: 260px;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: var(--font);
       background-color: var(--bg-base);
@@ -41,7 +36,6 @@
       height: 100vh;
       overflow: hidden;
     }
-
     aside.sidebar {
       width: var(--sidebar-width);
       background-color: var(--bg-surface);
@@ -52,14 +46,7 @@
       gap: 32px;
       flex-shrink: 0;
     }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 0 8px;
-    }
-
+    .brand { display: flex; align-items: center; gap: 12px; padding: 0 8px; }
     .brand-icon {
       width: 40px;
       height: 40px;
@@ -71,36 +58,10 @@
       font-size: 20px;
       box-shadow: 0 4px 12px var(--accent-red-glow);
     }
-
-    .brand-title {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-
-    .brand-subtitle {
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .nav-menu {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      list-style: none;
-    }
-
-    .nav-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      padding: 8px 12px 4px;
-    }
-
+    .brand-title { font-size: 16px; font-weight: 700; }
+    .brand-subtitle { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+    .nav-menu { display: flex; flex-direction: column; gap: 6px; list-style: none; }
+    .nav-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); padding: 8px 12px 4px; }
     .nav-item a {
       display: flex;
       align-items: center;
@@ -113,19 +74,12 @@
       border-radius: 10px;
       transition: all 0.2s ease;
     }
-
-    .nav-item.active a,
-    .nav-item a:hover {
+    .nav-item.active a, .nav-item a:hover {
       color: var(--text-main);
       background-color: var(--bg-surface-elevated);
       border: 1px solid var(--border-subtle);
     }
-
-    .nav-item.active a {
-      border-color: var(--accent-red);
-      box-shadow: 0 0 10px var(--accent-red-glow);
-    }
-
+    .nav-item.active a { border-color: var(--accent-red); box-shadow: 0 0 10px var(--accent-red-glow); }
     .sidebar-footer {
       margin-top: auto;
       padding: 12px;
@@ -136,22 +90,8 @@
       align-items: center;
       gap: 12px;
     }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: var(--accent-green);
-      box-shadow: 0 0 8px var(--accent-green);
-    }
-
-    main.main-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+    main.main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
     header.header {
       height: 70px;
       border-bottom: 1px solid var(--border-subtle);
@@ -164,80 +104,8 @@
       top: 0;
       z-index: 10;
     }
-
-    .search-bar {
-      position: relative;
-      width: 320px;
-    }
-
-    .search-bar input {
-      width: 100%;
-      background-color: var(--bg-surface-elevated);
-      border: 1px solid var(--border-subtle);
-      padding: 9px 16px 9px 36px;
-      border-radius: 8px;
-      color: var(--text-main);
-      font-size: 13px;
-      outline: none;
-      transition: border-color 0.2s ease;
-    }
-
-    .search-bar input:focus {
-      border-color: var(--accent-red);
-    }
-
-    .search-bar i {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      font-size: 13px;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .action-btn {
-      background-color: var(--bg-surface-elevated);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-main);
-      width: 38px;
-      height: 38px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      position: relative;
-    }
-
-    .badge-alert {
-      position: absolute;
-      top: 6px;
-      right: 6px;
-      width: 7px;
-      height: 7px;
-      background-color: var(--accent-red);
-      border-radius: 50%;
-    }
-
-    .content-body {
-      padding: 32px;
-      display: flex;
-      flex-direction: column;
-      gap: 28px;
-    }
-
-    .grid-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
-    }
-
+    .content-body { padding: 32px; display: flex; flex-direction: column; gap: 28px; }
+    .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
     .stat-card {
       background-color: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -246,58 +114,16 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      transition: transform 0.2s ease;
     }
-
-    .stat-card:hover {
-      transform: translateY(-2px);
-      border-color: var(--border-focus);
-    }
-
-    .stat-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: var(--text-muted);
-      font-size: 13px;
-      font-weight: 500;
-    }
-
-    .stat-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 15px;
-    }
-
+    .stat-header { display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size: 13px; }
+    .stat-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
     .stat-icon.red { background: rgba(225, 29, 46, 0.12); color: var(--accent-red); }
     .stat-icon.green { background: rgba(87, 242, 135, 0.12); color: var(--accent-green); }
     .stat-icon.blue { background: rgba(88, 101, 242, 0.12); color: var(--accent-blue); }
     .stat-icon.yellow { background: rgba(254, 231, 92, 0.12); color: var(--accent-yellow); }
-
-    .stat-value {
-      font-size: 26px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-    }
-
-    .stat-meta {
-      font-size: 12px;
-      color: var(--accent-green);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .split-layout {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 24px;
-    }
-
+    .stat-value { font-size: 26px; font-weight: 800; }
+    .stat-meta { font-size: 12px; color: var(--accent-green); display: flex; align-items: center; gap: 4px; }
+    .split-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
     .panel {
       background-color: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -307,15 +133,7 @@
       flex-direction: column;
       gap: 20px;
     }
-
-    .panel-title {
-      font-size: 16px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
+    .panel-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; }
     .player-card {
       background: linear-gradient(135deg, #1f1418, #161821);
       border: 1px solid var(--border-subtle);
@@ -325,13 +143,7 @@
       flex-direction: column;
       gap: 16px;
     }
-
-    .song-details {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-    }
-
+    .song-details { display: flex; gap: 16px; align-items: center; }
     .song-cover {
       width: 72px;
       height: 72px;
@@ -343,53 +155,12 @@
       font-size: 24px;
       color: var(--accent-red);
     }
-
-    .song-title {
-      font-size: 16px;
-      font-weight: 700;
-    }
-
-    .song-artist {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    .progress-bar-container {
-      width: 100%;
-      height: 6px;
-      background: var(--bg-base);
-      border-radius: 3px;
-      overflow: hidden;
-      cursor: pointer;
-    }
-
-    .progress-fill {
-      height: 100%;
-      width: 45%;
-      background: var(--accent-red);
-      box-shadow: 0 0 8px var(--accent-red-glow);
-    }
-
-    .player-controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-    }
-
-    .player-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 16px;
-      cursor: pointer;
-      transition: color 0.2s ease;
-    }
-
-    .player-btn:hover {
-      color: var(--text-main);
-    }
-
+    .song-title { font-size: 16px; font-weight: 700; }
+    .song-artist { font-size: 13px; color: var(--text-muted); }
+    .progress-bar-container { width: 100%; height: 6px; background: var(--bg-base); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 45%; background: var(--accent-red); }
+    .player-controls { display: flex; align-items: center; justify-content: center; gap: 24px; }
+    .player-btn { background: none; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer; }
     .player-btn.play {
       width: 44px;
       height: 44px;
@@ -401,41 +172,11 @@
       justify-content: center;
       box-shadow: 0 4px 12px var(--accent-red-glow);
     }
-
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 13px;
-    }
-
-    th {
-      color: var(--text-muted);
-      font-weight: 600;
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    td {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border-subtle);
-      color: var(--text-main);
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
+    .table-container { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th { color: var(--text-muted); font-weight: 600; padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); color: var(--text-main); }
+    .pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
     .pill.red { background: rgba(225, 29, 46, 0.15); color: var(--accent-red); }
     .pill.green { background: rgba(87, 242, 135, 0.15); color: var(--accent-green); }
     .pill.yellow { background: rgba(254, 231, 92, 0.15); color: var(--accent-yellow); }
@@ -445,9 +186,7 @@
 
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-icon">
-        <i class="fa-solid fa-shield-halved"></i>
-      </div>
+      <div class="brand-icon"><i class="fa-solid fa-shield-halved"></i></div>
       <div>
         <div class="brand-title">Prime Guardian</div>
         <div class="brand-subtitle">Security & Music</div>
@@ -462,37 +201,20 @@
       <div class="nav-label">Security Suite</div>
       <li class="nav-item"><a href="#"><i class="fa-solid fa-shield-virus"></i> Anti-Nuke</a></li>
       <li class="nav-item"><a href="#"><i class="fa-solid fa-user-shield"></i> Anti-Raid</a></li>
-      <li class="nav-item"><a href="#"><i class="fa-solid fa-comment-slash"></i> AutoMod / Spam</a></li>
-      
-      <div class="nav-label">Settings</div>
-      <li class="nav-item"><a href="#"><i class="fa-solid fa-sliders"></i> Bot Config</a></li>
     </ul>
 
     <div class="sidebar-footer">
       <div class="status-dot"></div>
       <div>
         <div style="font-size: 13px; font-weight: 600;">Node: Online</div>
-        <div style="font-size: 11px; color: var(--text-muted);">Prefix: &lt;</div>
+        <div style="font-size: 11px; color: var(--text-muted);">Prefix: !</div>
       </div>
     </div>
   </aside>
 
   <main class="main-content">
     <header class="header">
-      <div class="search-bar">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" placeholder="Search servers, members, logs...">
-      </div>
-
-      <div class="header-actions">
-        <button class="action-btn">
-          <i class="fa-regular fa-bell"></i>
-          <span class="badge-alert"></span>
-        </button>
-        <button class="action-btn">
-          <i class="fa-solid fa-gear"></i>
-        </button>
-      </div>
+      <h2 style="font-size: 18px; font-weight: 700;">Dashboard Overview</h2>
     </header>
 
     <div class="content-body">
@@ -512,16 +234,16 @@
             <div class="stat-icon green"><i class="fa-solid fa-users"></i></div>
           </div>
           <div class="stat-value">Optimal</div>
-          <div class="stat-meta"><i class="fa-solid fa-check"></i> Window: 10s</div>
+          <div class="stat-meta"><i class="fa-solid fa-check"></i> Running</div>
         </div>
 
         <div class="stat-card">
           <div class="stat-header">
-            <span>Default Volume</span>
+            <span>Voice Music Engine</span>
             <div class="stat-icon blue"><i class="fa-solid fa-volume-high"></i></div>
           </div>
-          <div class="stat-value">50%</div>
-          <div class="stat-meta" style="color: var(--text-muted);"><i class="fa-solid fa-sliders"></i> Bass: 50</div>
+          <div class="stat-value">Ready</div>
+          <div class="stat-meta" style="color: var(--accent-green);"><i class="fa-solid fa-circle-check"></i> Direct Voice Mode</div>
         </div>
 
         <div class="stat-card">
@@ -537,38 +259,28 @@
       <div class="split-layout">
         <div class="panel">
           <div class="panel-title">
-            <span>Security Incidents</span>
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Live Feed</span>
+            <span>Recent Activity</span>
+            <span style="font-size: 12px; color: var(--text-muted);">Live Feed</span>
           </div>
-
           <div class="table-container">
             <table>
               <thead>
                 <tr>
                   <th>Event</th>
-                  <th>Target / User</th>
-                  <th>Threshold</th>
-                  <th>Action</th>
+                  <th>Target</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>Mass Mentions</td>
-                  <td>User#0421</td>
-                  <td>5 / 5000ms</td>
-                  <td><span class="pill red">Muted (10m)</span></td>
+                  <td>Bot Startup</td>
+                  <td>System Core</td>
+                  <td><span class="pill green">Online</span></td>
                 </tr>
                 <tr>
-                  <td>Channel Deletion</td>
-                  <td>Admin#9999</td>
-                  <td>3 / 10000ms</td>
-                  <td><span class="pill yellow">Quarantine</span></td>
-                </tr>
-                <tr>
-                  <td>New Join Wave</td>
-                  <td>12 Members</td>
-                  <td>10 / 10000ms</td>
-                  <td><span class="pill green">Verified</span></td>
+                  <td>Voice Engine</td>
+                  <td>Direct Player</td>
+                  <td><span class="pill green">Active</span></td>
                 </tr>
               </tbody>
             </table>
@@ -577,28 +289,18 @@
 
         <div class="player-card">
           <div class="panel-title">
-            <span>Live Music Engine</span>
-            <span class="pill red">Lavalink</span>
+            <span>Direct Audio Engine</span>
+            <span class="pill red">Active</span>
           </div>
-
           <div class="song-details">
-            <div class="song-cover">
-              <i class="fa-solid fa-compact-disc fa-spin"></i>
-            </div>
+            <div class="song-cover"><i class="fa-solid fa-music"></i></div>
             <div>
-              <div class="song-title">Midnight City</div>
-              <div class="song-artist">M83 • Spotify Queue</div>
+              <div class="song-title">Direct Player</div>
+              <div class="song-artist">Use !play in Discord</div>
             </div>
           </div>
-
           <div class="progress-bar-container">
             <div class="progress-fill"></div>
-          </div>
-
-          <div class="player-controls">
-            <button class="player-btn"><i class="fa-solid fa-backward-step"></i></button>
-            <button class="player-btn play"><i class="fa-solid fa-pause"></i></button>
-            <button class="player-btn"><i class="fa-solid fa-forward-step"></i></button>
           </div>
         </div>
       </div>
