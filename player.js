@@ -2,8 +2,10 @@ const {
   joinVoiceChannel, 
   createAudioPlayer, 
   createAudioResource, 
-  AudioPlayerStatus 
+  AudioPlayerStatus, 
+  StreamType 
 } = require('@discordjs/voice');
+const ytdl = require('@distube/ytdl-core');
 const play = require('play-dl');
 
 const queues = new Map();
@@ -24,9 +26,24 @@ async function playNextSong(guildId) {
   guildQueue.currentSong = song;
 
   try {
-    const stream = await play.stream(song.url);
-    const resource = createAudioResource(stream.stream, {
-      inputType: stream.type,
+    let stream;
+    let type = StreamType.Arbitrary;
+
+    if (ytdl.validateURL(song.url)) {
+      stream = ytdl(song.url, {
+        filter: 'audioonly',
+        quality: 'highestaudio',
+        highWaterMark: 1 << 25,
+        liveBuffer: 4000
+      });
+    } else {
+      const source = await play.stream(song.url);
+      stream = source.stream;
+      type = source.type;
+    }
+
+    const resource = createAudioResource(stream, {
+      inputType: type,
       inlineVolume: true
     });
 
@@ -35,12 +52,12 @@ async function playNextSong(guildId) {
     guildQueue.player.play(resource);
 
     if (guildQueue.textChannel) {
-      guildQueue.textChannel.send(`🎵 Now playing: **${song.title}** (\`${song.duration}\`)`);
+      guildQueue.textChannel.send(`🎵 Now playing: **${song.title}**`);
     }
   } catch (err) {
     console.error('Audio Stream Error:', err);
     if (guildQueue.textChannel) {
-      guildQueue.textChannel.send(`❌ Failed to play: **${song.title}**`);
+      guildQueue.textChannel.send(`❌ Failed to stream: **${song.title}**`);
     }
     guildQueue.songs.shift();
     playNextSong(guildId);
@@ -53,7 +70,7 @@ function handleJoin(message) {
 
   let guildQueue = queues.get(message.guild.id);
   if (guildQueue && guildQueue.voiceChannel.id === voiceChannel.id) {
-    return message.reply('🔊 Already in your voice channel!');
+    return message.reply('🔊 Already connected to your voice channel!');
   }
 
   const player = createAudioPlayer();
@@ -61,6 +78,7 @@ function handleJoin(message) {
     channelId: voiceChannel.id,
     guildId: message.guild.id,
     adapterCreator: message.guild.voiceAdapterCreator,
+    selfDeaf: true
   });
 
   guildQueue = {
@@ -96,24 +114,36 @@ async function handlePlay(message, args) {
   if (!voiceChannel) return message.reply('❌ Join a voice channel first!');
 
   const query = args.join(' ');
-  if (!query) return message.reply('⚠️ Please provide a song name or YouTube URL!');
+  if (!query) return message.reply('⚠️ Please provide a song name or YouTube link!');
 
-  let searchResults;
+  let song = null;
+
   try {
-    searchResults = await play.search(query, { limit: 1 });
-  } catch (e) {
-    return message.reply('❌ Error searching for the track.');
+    if (ytdl.validateURL(query)) {
+      const info = await ytdl.getInfo(query);
+      song = {
+        title: info.videoDetails.title,
+        url: info.videoDetails.video_url,
+        duration: info.videoDetails.lengthSeconds
+      };
+    } else {
+      const searchResults = await play.search(query, { limit: 1 });
+      if (searchResults && searchResults.length > 0) {
+        song = {
+          title: searchResults[0].title,
+          url: searchResults[0].url,
+          duration: searchResults[0].durationRaw || 'Live'
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Search error:', err);
+    return message.reply('❌ Error fetching track information.');
   }
 
-  if (!searchResults || searchResults.length === 0) {
+  if (!song) {
     return message.reply('❌ No results found.');
   }
-
-  const song = {
-    title: searchResults[0].title,
-    url: searchResults[0].url,
-    duration: searchResults[0].durationRaw || 'Live'
-  };
 
   let guildQueue = queues.get(message.guild.id);
 
@@ -123,6 +153,7 @@ async function handlePlay(message, args) {
       channelId: voiceChannel.id,
       guildId: message.guild.id,
       adapterCreator: message.guild.voiceAdapterCreator,
+      selfDeaf: true
     });
 
     guildQueue = {
@@ -162,7 +193,7 @@ function handleSkip(message) {
   const guildQueue = queues.get(message.guild.id);
   if (!guildQueue || guildQueue.songs.length === 0) return message.reply('❌ No songs currently playing.');
   guildQueue.player.stop();
-  message.reply('⏭️ Skipped current track.');
+  message.reply('⏭️ Skipped track.');
 }
 
 function handleStop(message) {
@@ -172,7 +203,7 @@ function handleStop(message) {
   guildQueue.player.stop();
   guildQueue.connection.destroy();
   queues.delete(message.guild.id);
-  message.reply(' Stopped playback and disconnected.');
+  message.reply('⏹️ Stopped and disconnected.');
 }
 
 function setWebVolume(guildId, volumeLevel) {

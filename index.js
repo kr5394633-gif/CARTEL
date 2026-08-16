@@ -26,7 +26,7 @@ client.PREFIX = '!';
 app.get('/api/stats', (req, res) => {
   const totalGuilds = client.guilds.cache.size;
   const totalMembers = client.guilds.cache.reduce((acc, guild) => acc + (guild.memberCount || 0), 0);
-  const guilds = client.guilds.cache.map(g => ({
+  const guilds = client.guilds.cache.map((g) => ({
     id: g.id,
     name: g.name,
     memberCount: g.memberCount,
@@ -41,7 +41,7 @@ app.get('/api/stats', (req, res) => {
   ];
 
   client.commands.forEach((cmd, name) => {
-    if (!commandsList.some(c => c.name === name)) {
+    if (!commandsList.some((c) => c.name === `!${name}`)) {
       commandsList.push({ name: `${client.PREFIX}${name}`, desc: cmd.description || 'Command' });
     }
   });
