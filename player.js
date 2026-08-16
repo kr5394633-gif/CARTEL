@@ -7,35 +7,10 @@ const {
   VoiceConnectionStatus,
   StreamType
 } = require('@discordjs/voice');
+const ytstream = require('yt-stream');
 const play = require('play-dl');
 
 const queues = new Map();
-
-// Initialize SoundCloud Client ID once on startup
-(async () => {
-  try {
-    const scClientId = await play.getFreeClientID();
-    if (scClientId) {
-      await play.setToken({
-        soundcloud: {
-          client_id: scClientId
-        }
-      });
-      console.log('✅ SoundCloud streaming engine ready');
-    }
-  } catch (err) {
-    console.warn('SoundCloud token initialization note:', err.message);
-  }
-})();
-
-async function getStreamSource(url) {
-  try {
-    return await play.stream(url);
-  } catch (e) {
-    // Fallback: try forcing discordPlayerCompatibility mode
-    return await play.stream(url, { quality: 2, discordPlayerCompatibility: true });
-  }
-}
 
 async function playNextSong(guildId) {
   const guildQueue = queues.get(guildId);
@@ -44,7 +19,9 @@ async function playNextSong(guildId) {
   if (guildQueue.songs.length === 0) {
     guildQueue.currentResource = null;
     guildQueue.currentSong = null;
-    guildQueue.connection.destroy();
+    if (guildQueue.connection) {
+      guildQueue.connection.destroy();
+    }
     queues.delete(guildId);
     return;
   }
@@ -53,10 +30,15 @@ async function playNextSong(guildId) {
   guildQueue.currentSong = song;
 
   try {
-    const streamSource = await getStreamSource(song.url);
+    // Extract stream using yt-stream with high-quality audio fallback
+    const stream = await ytstream.stream(song.url, {
+      quality: 'high',
+      type: 'audio',
+      highWaterMark: 1048576 * 32
+    });
 
-    const resource = createAudioResource(streamSource.stream, {
-      inputType: streamSource.type,
+    const resource = createAudioResource(stream.stream, {
+      inputType: StreamType.Arbitrary,
       inlineVolume: true
     });
 
@@ -71,9 +53,9 @@ async function playNextSong(guildId) {
       guildQueue.textChannel.send(`🎵 Now playing: **${song.title}**`);
     }
   } catch (err) {
-    console.error('Playback Stream Error on:', song.title, err);
+    console.error('Audio Stream Extraction Error:', err.message || err);
     if (guildQueue.textChannel) {
-      guildQueue.textChannel.send(`❌ Could not stream: **${song.title}** (Skipping)`);
+      guildQueue.textChannel.send(`❌ Playback stream error on: **${song.title}** (Skipping)`);
     }
     guildQueue.songs.shift();
     playNextSong(guildId);
@@ -139,46 +121,44 @@ async function handlePlay(message, args) {
   if (!voiceChannel) return message.reply('❌ Join a voice channel first!');
 
   const query = args.join(' ');
-  if (!query) return message.reply('⚠️ Please provide a song name or track link!');
+  if (!query) return message.reply('⚠️ Please provide a song name or link!');
 
   let song = null;
 
   try {
-    // 1. Direct SoundCloud Link
-    if (play.so_validate(query) === 'track') {
-      const info = await play.soundcloud(query);
-      song = { title: info.name, url: info.url };
-    } 
-    // 2. Direct YouTube Link
-    else if (play.yt_validate(query) === 'video') {
-      const info = await play.video_basic_info(query);
+    if (query.startsWith('http://') || query.startsWith('https://')) {
+      const getInfo = await ytstream.getInfo(query);
       song = {
-        title: info.video_details.title,
-        url: info.video_details.url
+        title: getInfo.title,
+        url: query
       };
-    }
-    // 3. Search query: Try SoundCloud first, then fallback to YouTube
-    else {
-      let results = await play.search(query, { limit: 1, source: { soundcloud: 'tracks' } }).catch(() => []);
-      
-      if (!results || results.length === 0) {
-        results = await play.search(query, { limit: 1, source: { youtube: 'video' } }).catch(() => []);
-      }
-
+    } else {
+      const results = await ytstream.search(query);
       if (results && results.length > 0) {
         song = {
-          title: results[0].title || results[0].name,
+          title: results[0].title,
           url: results[0].url
         };
       }
     }
   } catch (err) {
-    console.error('Search error:', err.message);
-    return message.reply('❌ Error searching for the track. Try typing another title.');
+    console.error('Search error:', err.message || err);
+    // Secondary fallback search if ytstream search encounters an error
+    try {
+      const playResults = await play.search(query, { limit: 1 });
+      if (playResults && playResults.length > 0) {
+        song = {
+          title: playResults[0].title,
+          url: playResults[0].url
+        };
+      }
+    } catch (e) {
+      console.error('Fallback search error:', e.message || e);
+    }
   }
 
   if (!song) {
-    return message.reply('❌ No tracks found.');
+    return message.reply('❌ Could not find the song. Try searching with a different name.');
   }
 
   let guildQueue = queues.get(message.guild.id);
@@ -246,7 +226,9 @@ function handleStop(message) {
   if (!guildQueue) return message.reply('❌ Nothing is playing.');
   guildQueue.songs = [];
   guildQueue.player.stop();
-  guildQueue.connection.destroy();
+  if (guildQueue.connection) {
+    guildQueue.connection.destroy();
+  }
   queues.delete(message.guild.id);
   message.reply(' Stopped and disconnected.');
 }
