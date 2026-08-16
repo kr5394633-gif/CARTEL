@@ -3,9 +3,13 @@ const {
   createAudioPlayer, 
   createAudioResource, 
   AudioPlayerStatus,
+  entersState,
+  VoiceConnectionStatus,
   StreamType
 } = require('@discordjs/voice');
 const play = require('play-dl');
+const prism = require('prism-media');
+const ffmpeg = require('ffmpeg-static');
 
 const queues = new Map();
 
@@ -25,10 +29,29 @@ async function playNextSong(guildId) {
   guildQueue.currentSong = song;
 
   try {
-    const stream = await play.stream(song.url, { quality: 2, discordPlayerCompatibility: true });
-    
-    const resource = createAudioResource(stream.stream, {
-      inputType: stream.type,
+    const streamInfo = await play.stream(song.url, { 
+      quality: 2, 
+      discordPlayerCompatibility: true 
+    });
+
+    const ffmpegProcess = new prism.FFmpeg({
+      shell: false,
+      command: ffmpeg,
+      args: [
+        '-reconnect', '1',
+        '-reconnect_streamed', '1',
+        '-reconnect_delay_max', '5',
+        '-i', streamInfo.url,
+        '-analyzeduration', '0',
+        '-loglevel', '0',
+        '-f', 's16le',
+        '-ar', '48000',
+        '-ac', '2',
+      ],
+    });
+
+    const resource = createAudioResource(ffmpegProcess, {
+      inputType: StreamType.Raw,
       inlineVolume: true
     });
 
@@ -52,16 +75,15 @@ async function playNextSong(guildId) {
   }
 }
 
-function handleJoin(message) {
+async function handleJoin(message) {
   const voiceChannel = message.member.voice.channel;
   if (!voiceChannel) return message.reply('❌ You need to be in a voice channel first!');
 
   let guildQueue = queues.get(message.guild.id);
   if (guildQueue && guildQueue.voiceChannel.id === voiceChannel.id) {
-    return message.reply('🔊 Already in your voice channel!');
+    return message.reply('🔊 Already connected to your voice channel!');
   }
 
-  const player = createAudioPlayer();
   const connection = joinVoiceChannel({
     channelId: voiceChannel.id,
     guildId: message.guild.id,
@@ -69,6 +91,15 @@ function handleJoin(message) {
     selfDeaf: true,
     selfMute: false
   });
+
+  try {
+    await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
+  } catch (error) {
+    connection.destroy();
+    return message.reply('❌ Failed to establish connection to the voice channel.');
+  }
+
+  const player = createAudioPlayer();
 
   guildQueue = {
     textChannel: message.channel,
@@ -135,7 +166,6 @@ async function handlePlay(message, args) {
   let guildQueue = queues.get(message.guild.id);
 
   if (!guildQueue) {
-    const player = createAudioPlayer();
     const connection = joinVoiceChannel({
       channelId: voiceChannel.id,
       guildId: message.guild.id,
@@ -143,6 +173,15 @@ async function handlePlay(message, args) {
       selfDeaf: true,
       selfMute: false
     });
+
+    try {
+      await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
+    } catch (error) {
+      connection.destroy();
+      return message.reply('❌ Voice connection timed out.');
+    }
+
+    const player = createAudioPlayer();
 
     guildQueue = {
       textChannel: message.channel,
