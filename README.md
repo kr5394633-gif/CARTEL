@@ -1,87 +1,259 @@
-# Xeta - Premium Discord Music Bot
+# Flake
 
-<p align="center">
-  <img src="https://media.discordapp.net/attachments/1212679718399250452/1212698213602168862/XETA_BANNER.gif" alt="Xeta Banner" width="700">
-</p>
-
-<p align="center">
-  <a href="https://discord.gg/uAwY7pfwfS"><img src="https://img.shields.io/badge/Discord-Vibe%20Coders%20%3C3-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord Server"></a>
-  <img src="https://img.shields.io/badge/Language-Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Language">
-  <img src="https://img.shields.io/badge/Database-MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="Database">
-</p>
+A modular, self-hostable Discord bot built around cryptocurrency utilities. Flake provides live price tracking, on-chain balance lookups, transaction inspection, and payment profile management — all served through a clean Discord.js v14 interface with Components V2 UI.
 
 ---
 
 ## Features
 
-Xeta is a feature-rich, high-performance Discord Music Bot designed to deliver crystal-clear audio and a seamless user experience.
-
-- **Multi-Source Support**: Play music directly from **Spotify**, **YouTube**, **YouTube Music**, **SoundCloud**, **Apple Music**, **Twitch**, **Bandcamp**, **Vimeo**, **Reddit**, and **TikTok**.
-- **Interactive Controller**: Control playback with an interactive button-based controller including play, pause, skip, loop, volume, autoplay, queue management, and shuffle.
-- **Audio Effects**: Enhance your listening experience with customizable audio effects and filters.
-- **Lyrics Integration**: Get real-time lyrics for the currently playing track via `A_ZLyrics` and other platforms.
-- **Localization & Translation**: Fully supports multiple languages with built-in translations.
-- **Playlist Management**: Save, view, and play custom user playlists directly from MongoDB.
-- **High Performance**: Powered by `voicelink` and multi-node Lavalink support.
-
----
-
-## How to Host
-
-Follow these steps to host **Xeta** on your machine or VPS.
-
-### Prerequisites
-- Python 3.8 or higher
-- MongoDB Database
-- Lavalink Node (configured in `settings.json`)
-
-### Option 1: Manual Setup
-
-1. **Clone the repository and install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Configure environment variables:**
-   - Copy `exmp.env` to `.env`:
-     ```bash
-     cp exmp.env .env
-     ```
-   - Open `.env` and fill in the required fields:
-     - `TOKEN`: Your Discord Bot Token
-     - `CLIENT_ID`: Your Discord App Client ID
-     - `MONGODB_URL`: Your MongoDB connection URI
-     - `SPOTIFY_CLIENT_ID` & `SPOTIFY_CLIENT_SECRET`: For Spotify integration
-
-3. **Configure settings:**
-   - Modify `settings.json` to change default prefix, colors, and configure your Lavalink nodes (default password is `ChampOp`).
-
-4. **Run the bot:**
-   ```bash
-   python _main.py
-   ```
-
-### Option 2: Docker Setup
-
-If you prefer using Docker:
-
-1. Build and run using Docker Compose:
-   ```bash
-   docker compose up -d
-   ```
+- Live market prices with 24-hour change and auto-generated price charts for 30+ cryptocurrencies
+- On-chain wallet balance lookups with recent transaction history across multiple networks
+- Transaction inspection by hash with amount, fee, confirmations, and explorer links
+- Per-user payment profile system supporting crypto addresses, UPI IDs, and PayPal usernames
+- Prefix and slash command support running side by side
+- Configurable per-guild prefix via modal input
+- In-memory caching with configurable size limits
+- Graceful shutdown handling with cleanup hooks
+- Developer blacklist system for users and guilds
+- Modular event and command loader with hot-reload support
 
 ---
 
-## Credits & Team
+## Supported Networks
 
-Here are the people behind the bot:
+| Name           | Symbol | Type   |
+| -------------- | ------ | ------ |
+| Bitcoin        | BTC    | UTXO   |
+| Ethereum       | ETH    | EVM    |
+| Litecoin       | LTC    | UTXO   |
+| Bitcoin Cash   | BCH    | UTXO   |
+| Dogecoin       | DOGE   | UTXO   |
+| Zcash          | ZEC    | UTXO   |
+| Dash           | DASH   | UTXO   |
+| XRP            | XRP    | XRP    |
+| Stellar        | XLM    | XLM    |
+| Tron           | TRX    | Tron   |
+| Solana         | SOL    | EVM    |
+| BNB Chain      | BNB    | EVM    |
+| Polygon        | POL    | EVM    |
+| Avalanche      | AVAX   | EVM    |
+| Arbitrum       | ARB    | EVM    |
+| Optimism       | OP     | EVM    |
+| Cardano        | ADA    | —      |
+| Monero         | XMR    | —      |
+| Polkadot       | DOT    | —      |
+| And more...    |        |        |
 
-* **Code Provider:**
-  * [! Undefined.asf](https://discord.com/users/1346442518950051902)
+---
 
-* **Leakers:**
-  * [𝙲 𝛂 𝛊 𝛞 𝛐 𝚣](https://discord.com/users/861847026923995137)
-  * [Mik3y🥀](https://discord.com/users/980000051562700820)
+## Commands
 
-* **Official Discord Server:**
-  * Join [Vibe coders <3](https://discord.gg/uAwY7pfwfS) for support, updates, and chat!
+### General
+
+| Command   | Description                                      |
+| --------- | ------------------------------------------------ |
+| `ping`    | Display WebSocket and API latency                |
+| `help`    | Browse all available commands                    |
+| `stats`   | View bot statistics and uptime                   |
+| `invite`  | Get the bot invite link and app install link     |
+| `support` | Get a link to the support server                 |
+
+### Crypto
+
+| Command        | Description                                                    |
+| -------------- | -------------------------------------------------------------- |
+| `price`        | Get the live USD price and 24h change for any supported coin   |
+| `bal`          | Look up the balance and recent transactions of any wallet      |
+| `mybal`        | Look up the balance of your own saved wallet address           |
+| `tx`           | Inspect a transaction by hash on any supported network         |
+
+### Profile
+
+| Command         | Description                                      |
+| --------------- | ------------------------------------------------ |
+| `profile`       | View your full payment profile                   |
+| `addy`          | View a saved crypto address for a given coin     |
+| `setaddy`       | Save a crypto address to your profile            |
+| `removeaddy`    | Remove a saved crypto address from your profile  |
+| `upi`           | View your saved UPI ID                           |
+| `setupi`        | Save a UPI ID to your profile                    |
+| `removeupi`     | Remove your saved UPI ID                         |
+| `paypal`        | View your saved PayPal username                  |
+| `setpaypal`     | Save a PayPal username to your profile           |
+| `removepaypal`  | Remove your saved PayPal username                |
+
+### Configuration
+
+| Command  | Description                    |
+| -------- | ------------------------------ |
+| `prefix` | View or change the guild prefix |
+
+### Developer
+
+| Command     | Description                                           |
+| ----------- | ----------------------------------------------------- |
+| `blacklist` | Add, remove, check, or list blacklisted users/guilds  |
+
+---
+
+## Prerequisites
+
+- Node.js 18 or higher
+- A MongoDB instance (local or Atlas)
+- A [Tatum](https://tatum.io) API key for blockchain data
+- A Discord bot token with the Message Content intent enabled
+
+---
+
+## Setup
+
+**1. Clone the repository**
+
+```bash
+git clone https://github.com/itsfizys/Flake.git
+cd Flake
+```
+
+**2. Install dependencies**
+
+```bash
+npm install
+```
+
+**3. Configure environment variables**
+
+Create a `.env` file in the root directory:
+
+```env
+TOKEN=your_discord_bot_token
+CLIENT_ID=your_discord_client_id
+OWNER_IDS=your_discord_user_id
+MONGODB_URI=your_mongodb_connection_string
+TATUM_API_KEY=your_tatum_api_key
+```
+
+| Variable       | Required | Description                                        |
+| -------------- | -------- | -------------------------------------------------- |
+| `TOKEN`        | Yes      | Your Discord bot token                             |
+| `CLIENT_ID`    | Yes      | Your Discord application client ID                 |
+| `OWNER_IDS`    | Yes      | Comma-separated owner user IDs                     |
+| `MONGODB_URI`  | Yes      | MongoDB connection string                          |
+| `TATUM_API_KEY`| Yes      | Tatum API key for on-chain balance and tx lookups  |
+
+**4. Register slash commands**
+
+Slash commands are registered automatically on bot startup.
+
+**5. Start the bot**
+
+```bash
+npm start
+```
+
+---
+
+## File Structure
+
+```
+Flake/
+├── src/
+│   ├── bot.js                          # Entry point, shutdown handling
+│   ├── assets/
+│   │   ├── help_banner.png             # Banner image for the help command
+│   │   └── qr_frame2.jpg              # QR code frame asset
+│   ├── commands/
+│   │   ├── dev/
+│   │   │   └── blacklist.js           # Developer blacklist management
+│   │   └── meta/
+│   │       ├── config/
+│   │       │   └── prefix.js          # Guild prefix configuration
+│   │       ├── addy.js                # View saved crypto address
+│   │       ├── bal.js                 # Wallet balance lookup
+│   │       ├── help.js                # Help menu
+│   │       ├── invite.js              # Bot invite links
+│   │       ├── mybal.js               # Personal wallet balance
+│   │       ├── paypal.js              # View saved PayPal
+│   │       ├── ping.js                # Latency check
+│   │       ├── price.js               # Live crypto price with chart
+│   │       ├── profile.js             # Full user payment profile
+│   │       ├── removeaddy.js          # Remove saved address
+│   │       ├── removepaypal.js        # Remove saved PayPal
+│   │       ├── removeupi.js           # Remove saved UPI
+│   │       ├── setaddy.js             # Save crypto address
+│   │       ├── setpaypal.js           # Save PayPal username
+│   │       ├── setupi.js              # Save UPI ID
+│   │       ├── stats.js               # Bot statistics
+│   │       ├── support.js             # Support server link
+│   │       ├── tx.js                  # Transaction lookup
+│   │       └── upi.js                 # View saved UPI
+│   ├── config/
+│   │   ├── config.js                  # Bot configuration and environment
+│   │   └── emoji.js                   # Custom emoji definitions
+│   ├── database/
+│   │   ├── manager.js                 # Database manager (aggregates all services)
+│   │   ├── mongo.js                   # MongoDB connection handler
+│   │   ├── repositories/
+│   │   │   ├── blacklist.js           # Blacklist data access
+│   │   │   ├── guilds.js              # Guild data access
+│   │   │   └── users.js               # User data access
+│   │   ├── schema/
+│   │   │   ├── blacklist.js           # Blacklist Mongoose schema
+│   │   │   ├── guilds.js              # Guild Mongoose schema
+│   │   │   ├── index.js               # Schema exports
+│   │   │   └── users.js               # User Mongoose schema
+│   │   └── services/
+│   │       ├── blacklist.js           # Blacklist business logic
+│   │       ├── guilds.js              # Guild business logic
+│   │       └── users.js               # User business logic
+│   ├── events/
+│   │   └── discord/
+│   │       ├── clientReady.js         # Ready event, presence rotation
+│   │       └── guild/
+│   │           ├── Prefixcmd.js       # Prefix command handler
+│   │           └── slashcmd.js        # Slash command handler
+│   ├── structures/
+│   │   ├── classes/
+│   │   │   ├── cache.js               # In-memory cache implementation
+│   │   │   ├── client.js              # Extended Discord.js Client (Bot class)
+│   │   │   ├── command.js             # Base Command class
+│   │   │   ├── context.js             # Unified command context (prefix + slash)
+│   │   │   └── rei.js                 # Utility class
+│   │   └── handlers/
+│   │       ├── commandHandler.js      # Command registration and execution
+│   │       ├── eventLoader.js         # Dynamic event loader
+│   │       └── event-handlers/
+│   │           └── discord.js         # Discord event handler bootstrap
+│   └── utils/
+│       ├── chainConfig.js             # Supported chain definitions and aliases
+│       ├── chart.js                   # Price chart generator (canvas)
+│       ├── common.js                  # Shared utility functions
+│       ├── disableComponents.js       # Discord component disabling helper
+│       ├── formatters.js              # Number, address, and value formatters
+│       ├── index.js                   # Utility barrel export
+│       ├── logger.js                  # Styled console logger
+│       ├── permissionHandler.js       # Discord permission checks
+│       ├── price.js                   # Tatum price fetching
+│       └── tatum.js                   # Tatum API client wrapper
+├── .gitignore
+└── package.json
+```
+
+---
+
+## Credits
+
+Developed by **[itsfizys](https://github.com/itsfizys)**.
+
+---
+
+## Support
+
+Join the **AeroX Development** server for help, updates, and feedback.
+
+**https://discord.gg/aerox**
+
+---
+
+## License
+
+Custom
