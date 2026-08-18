@@ -1,0 +1,115 @@
+
+{
+    "nodes": {
+        "DEFAULT": {
+            "host":"212.227.242.222",
+            "port":4123,
+            "password": "ChampOp",
+            "secure": false,
+            "identifier": "Xeta Pvt "
+        }
+    },
+    "prefix": "x",
+    "activity": [
+        {"listen": "xhelp"},{"watch": "@@players@@ players"}
+    ],
+    "bot_access_user": [910939726482141204,1008215520530669588] ,
+    "embed_color": "0xD2042D",
+    "default_max_queue": 1000,
+    "lyrics_platform": "A_ZLyrics",
+    "ipc_server": {
+        "host": "127.0.0.1",
+        "port": 8000,
+        "enable": false
+    },
+    "sources_settings": {
+        "youtube": {
+            "emoji": "<a:spotify:941269527180767232>",
+            "color": "0xFF0000"
+        },
+        "youtube music": {
+            "emoji": "<a:spotify:941269527180767232>",
+            "color": "0xFF0000"
+        },
+        "spotify": {
+            "emoji": "<a:spotify:941269527180767232>",
+            "color": "0x1DB954"
+        },
+        "soundcloud": {
+            "emoji": "<:soundcloud:1161858312262930493>",
+            "color": "0xFF7700"
+        },
+        "twitch": {
+            "emoji": "<:twitch:852729278285086741>",
+            "color": "0x9B4AFF"
+        },
+        "bandcamp": {
+            "emoji": "<:bandcamp:864694003811221526>",
+            "color": "0x6F98A7"
+        },
+        "vimeo": {
+            "emoji": "<:vimeo:864694001919721473>",
+            "color": "0x1ABCEA"
+        },
+        "apple": {
+            "emoji": "<:applemusic:1161858943639900192>",
+            "color": "0xE298C4"
+        },
+        "reddit": {
+            "emoji": "<:reddit:996007566863773717>",
+            "color": "0xFF5700"
+        },
+        "tiktok": {
+            "emoji": "<:tiktok:996007689798811698>",
+            "color": "0x74ECE9"
+        }
+    },
+    "default_controller": {
+        "embeds": {
+            "active": {
+                "description": "**Now Playing: ```[@@track_name@@]```\nLink: [Click Me](https://social-rexz.vercel.app) | Requester: @@requester@@ | DJ: @@dj@@**","footer": {"text": "Queue Length: @@queue_length@@ | Duration: @@track_duration@@ | Volume: @@volume@@% {{loop_mode != 'Off' ?? | Repeat: @@loop_mode@@}}"},
+                "image": "@@track_thumbnail@@","author": {"name": "Music Controller | @@channel_name@@","icon_url": "@@bot_icon@@"}
+                ,"color": "@@track_color@@"},
+            "inactive": {                
+                "title": {
+                    "name": "There are no songs playing right now"
+                },
+                "description": "[Support](@@server_invite_link@@) | [Invite](@@invite_link@@)", 
+                "image": "https://media.discordapp.net/attachments/1212679718399250452/1212698213602168862/XETA_BANNER.gif?ex=665a45f8&is=6658f478&hm=43b1af09a8d07a79aedc7f11945d4f90fe64c1f51e0948dcbff5556da274d9a1&",                "color": "#ffdf00"
+            }
+        },
+        "default_buttons": [
+            ["tracks"], 
+            ["autoplay","back", "resume", "skip", "loop"],
+
+    ["volumedown","rewind","stop","forward","volumeup"],["queue","shuffle", "add","volumemute","queclr"]
+        ],
+        "disableButtonText":true
+    },
+    "cooldowns": {
+        "connect": [
+            2,
+            30
+        ],
+        "playlist view": [
+            1,
+            30
+        ]
+    },
+    "aliases": {
+        "connect": [
+            "join","j"
+        ],
+        "leave": [
+            "stop",
+            "bye","dc"
+        ],
+        "play": [
+            "p"
+        ],
+        "view": [
+            "v"
+        ]
+    },
+    "version": "v2.6.8"
+}
